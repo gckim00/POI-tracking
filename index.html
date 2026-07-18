@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>실시간 위치 추천 시스템</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f5f7fa; color: #333;
+padding: 15px; }
+.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
+h2 { font-size: 18px; margin-bottom: 10px; color: #1a73e8; }
+p { font-size: 14px; color: #555; margin-bottom: 8px; }
+.highlight { font-weight: bold; color: #222; }
+button { width: 100%; padding: 14px; background-color: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px;
+font-weight: bold; cursor: pointer; margin-top: 10px; }
+button:active { background-color: #1557b0; }
+.btn-secondary { background-color: #5f6368; }
+.btn-secondary:active { background-color: #4c4f52; }
+.alert-active { background-color: #fff3cd; border: 2px solid #ffeeba; }
+#log-container { background: #202124; color: #00ff00; padding: 12px; border-radius: 8px; height: 180px; overflow-y: auto; font-family:
+monospace; font-size: 12px; margin-top: 10px; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
+.badge-poi { background-color: #34a853; }
+.badge-rest { background-color: #ea4335; }
+</style>
+</head>
+<body>
+<div class="card">
+<h2>📡 실시간 GPS 및 시스템 상태</h2>
+
+<p>현재 위도: <span id="lbl-lat" class="highlight">수신 대기 중</span></p>
+<p>현재 경도: <span id="lbl-lng" class="highlight">수신 대기 중</span></p>
+<p>정확도: <span id="lbl-acc" class="highlight">-</span></p>
+<button id="btn-toggle-gps">실시간 GPS 위치 추적 시작</button>
+</div>
+
+<div id="panel-alert" class="card" style="display: none;">
+<h2>📢 주변 추천 장소 발견!</h2>
+<p id="txt-alert-msg" style="font-size: 16px; font-weight: bold; color: #d93025; text-align: center; margin: 10px 0;">안내 방송 중...</p>
+<button onclick="processUserResponse('Yes')">터치로 "Yes" 선택</button>
+<button id="btn-mic" class="btn-secondary" onclick="listenVoiceCommand()">🎤 음성으로 "예" 말하기</button>
+</div>
+
+<div class="card">
+<h2>📋 테스트용 가상 타겟 데이터</h2>
+<p>테스트 편의를 위해 스마트폰 주변에 아래 가상 장소를 임의 배치하여 거리 진입을 시뮬레이션할 수 있습니다.</p>
+<table>
+<tr><th>분류</th><th>장소명</th><th>평점</th></tr>
+<tr><td><span class="badge badge-poi">POI</span></td><td>가상 역사공원</td><td>4.6</td></tr>
+<tr><td><span class="badge badge-rest">식당</span></td><td>가상 추천식당</td><td>4.8</td></tr>
+</table>
+<button class="btn-secondary" onclick="setVirtualTargetHere()">📍 현재 위치 기반으로 가상 타겟 재설정</button>
+</div>
+
+<div class="card">
+<h2>💻 실시간 시스템 로그</h2>
+<div id="log-container">시스템이 준비되었습니다.</div>
+</div>
+
+<script>
+let watchId = null;
+let isSearching = false;
+let targetPlace = null;
+// 초기 데이터셋 (사용자가 실제 이동 시 매칭할 기준 DB 데이터)
+let poiTable = [
+{ name: "가상 역사공원", lat: 37.5665, lng: 126.9780, rating: 4.6 }
+];
+let restaurantTable = [
+{ name: "가상 추천식당", lat: 37.5669, lng: 126.9785, rating: 4.8 }
+];
+function printLog(text) {
+
+const container = document.getElementById("log-container");
+const now = new Date();
+const timeStr = now.toTimeString().split(' ')[0];
+container.innerHTML += `
+[${timeStr}] ${text}`;
+container.scrollTop = container.scrollHeight;
+}
+// 두 좌표 간 하버사인 미터 거리 계산
+function getMeterDistance(lat1, lon1, lat2, lon2) {
+const R = 6371000;
+const dLat = (lat2 - lat1) * Math.PI / 180;
+const dLon = (lon2 - lon1) * Math.PI / 180;
+const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+Math.sin(dLon/2) * Math.sin(dLon/2);
+const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+return R * c;
+}
+// 스마트폰 TTS 스피커 음성 출력
+function executeTTS(message) {
+if ('speechSynthesis' in window) {
+window.speechSynthesis.cancel();
+const speech = new SpeechSynthesisUtterance(message);
+speech.lang = 'ko-KR';
+window.speechSynthesis.speak(speech);
+}
+}
+// 현재 스마트폰 GPS 위치 실시간 추적 토글
+document.getElementById("btn-toggle-gps").addEventListener("click", function() {
+if (watchId !== null) {
+navigator.geolocation.clearWatch(watchId);
+watchId = null;
+this.innerText = "실시간 GPS 위치 추적 시작";
+this.className = "";
+printLog("GPS 위치 추적을 중지했습니다.");
+return;
+}
+if (!navigator.geolocation) {
+alert("이 기기는 GPS 위치 정보를 지원하지 않습니다.");
+
+return;
+}
+this.innerText = "위치 추적 중 (클릭 시 중지)";
+this.className = "btn-secondary";
+printLog("GPS 추적 장치를 가동합니다. 실시간 위치 변화를 감지합니다.");
+watchId = navigator.geolocation.watchPosition(function(position) {
+const lat = position.coords.latitude;
+const lng = position.coords.longitude;
+const acc = position.coords.accuracy;
+document.getElementById("lbl-lat").innerText = lat.toFixed(6);
+document.getElementById("lbl-lng").innerText = lng.toFixed(6);
+document.getElementById("lbl-acc").innerText = acc.toFixed(1) + "m";
+if (isSearching) return;
+// 1. POI 테이블 검사 (50m 이내, Rating 4.5 이상)
+for (let poi of poiTable) {
+let dist = getMeterDistance(lat, lng, poi.lat, poi.lng);
+if (dist <= 50 && poi.rating >= 4.5) {
+launchRecommendation(poi, dist);
+return;
+}
+}
+// 2. 식당 테이블 검사 (50m 이내, Rating 4.7 이상)
+for (let rest of restaurantTable) {
+let dist = getMeterDistance(lat, lng, rest.lat, rest.lng);
+if (dist <= 50 && rest.rating >= 4.7) {
+launchRecommendation(rest, dist);
+return;
+}
+}
+}, function(error) {
+printLog("GPS 수신 오류: " + error.message);
+}, {
+enableHighAccuracy: true,
+maximumAge: 0,
+timeout: 10000
+});
+});
+
+// 50미터 이내 조건 도달 시 알림 트리거
+function launchRecommendation(place, distance) {
+isSearching = true;
+targetPlace = place;
+const panel = document.getElementById("panel-alert");
+panel.style.display = "block";
+panel.classList.add("alert-active");
+const msg = `50미터 이내에 ${place.name}가 있습니다, 소개해 드릴까요?`;
+document.getElementById("txt-alert-msg").innerText = msg;
+printLog(`[조건 충족] 반경 ${distance.toFixed(1)}m 내 장소 '${place.name}' 발견.`);
+executeTTS(msg);
+}
+// 마이크 음성 인식 제어 (Web Speech API)
+function listenVoiceCommand() {
+window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!window.SpeechRecognition) {
+printLog("시스템 알림: 이 스마트폰 브라우저는 음성 인식을 지원하지 않아 터치로 처리해야 합니다.");
+return;
+}
+const recognition = new SpeechRecognition();
+recognition.lang = 'ko-KR';
+const micBtn = document.getElementById("btn-mic");
+micBtn.innerText = "️ 음성을 듣고 있습니다...";
+printLog("마이크 활성화. '예' 또는 'Yes'라고 말씀하세요.");
+recognition.onresult = function(event) {
+const text = event.results[0][0].transcript.trim();
+printLog(`음성식별 결과: "${text}"`);
+if (text.includes("예") || text.toLowerCase().includes("yes") || text.includes("예스")) {
+processUserResponse("Yes");
+} else {
+printLog("수락 단어가 감지되지 않았습니다. 다시 말씀하시거나 터치해 주세요.");
+}
+};
+recognition.onend = function() {
+
+micBtn.innerText = "🎤 음성으로 \"예\" 말하기";
+};
+recognition.onerror = function(e) {
+printLog("음성 인식 오류 발생: " + e.error);
+};
+recognition.start();
+}
+// 사용자 수락 응답 처리 및 로컬 데이터베이스 / 외부 쿼리 조회 분기
+function processUserResponse(answer) {
+const panel = document.getElementById("panel-alert");
+panel.style.display = "none";
+panel.classList.remove("alert-active");
+isSearching = false;
+if (answer === 'Yes') {
+printLog(`[승인 확인] '${targetPlace.name}' 상세 조회 프로세스를 가동합니다.`);
+lookupDatabaseAndQuery(targetPlace.name);
+} else {
+printLog("사용자가 안내를 거절하였습니다.");
+}
+}
+// 순차 데이터 조회 코어 로직
+function lookupDatabaseAndQuery(name) {
+// 우선순위 1: POI 테이블 조회
+for (let poi of poiTable) {
+if (poi.name === name) {
+printLog(`[조회 완료] POI Table에서 일치하는 원본 데이터를 정상 확보하였습니다.`);
+executeTTS(`피오아이 테이블 정보입니다. ${name}은 평점 ${poi.rating}점의 등록 장소입니다.`);
+return;
+}
+}
+// 우선순위 2: 레스토랑 테이블 조회
+for (let rest of restaurantTable) {
+if (rest.name === name) {
+printLog(`[조회 완료] Restaurant Table에서 일치하는 원본 데이터를 정상 확보하였습니다.`);
+executeTTS(`레스토랑 테이블 정보입니다. ${name}은 평점 ${rest.rating}점의 검증된 식당입니다.`);
+return;
+}
+}
+
+// 우선순위 3: 둘 다 없을 경우 레거시 Box A3, Box A4 외부 쿼리 호출 연동
+printLog(`[조회 실패] 로컬 내부 테이블에 해당 장소의 상세 정보가 누락되어 있습니다.`);
+printLog(`[외부 연동] 이전 시스템의 Box A3 쿼리 및 Box A4 쿼리 파이프라인을 연동 가동합니다.`);
+const externalDataSimulated = `외부 박스 에이쓰리 및 에이포 데이터베이스 시스템에서 연동하여 읽어온 ${name}의 백업 텍스트
+전문을 음성 출력합니다.`;
+executeTTS(externalDataSimulated);
+}
+// 테스트 편의성을 위한 현재 좌표 기반 동적 마크 기능
+function setVirtualTargetHere() {
+if (!navigator.geolocation) return;
+navigator.geolocation.getCurrentPosition(function(position) {
+const lat = position.coords.latitude;
+const lng = position.coords.longitude;
+// 현재 스마트폰 기준 약 15~20미터 북동쪽에 타겟 강제 배치
+poiTable[0].lat = lat + 0.00015;
+poiTable[0].lng = lng + 0.00015;
+restaurantTable[0].lat = lat - 0.00015;
+restaurantTable[0].lng = lng - 0.00015;
+printLog("📍 현 위치 근방 20m 내외로 테스트용 가상 POI와 식당 좌표를 재정렬했습니다. 조금만 걸어가시면 알림이
+작동합니다.");
+});
+}
+</script>
+</body>
+</html>
