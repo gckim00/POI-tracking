@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hybrid Travel Assistant App Simulator v4</title>
+    <title>Hybrid Travel Assistant App Simulator v5</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f2f4f8; color: #222; font-size: 13px; }
@@ -99,8 +99,8 @@
         <div class="btn-grid">
             <button class="btn btn-db-poi" onclick="searchDBPlace('POI')">DB내 POI<br>(1km 이내)</button>
             <button class="btn btn-db-res" onclick="searchDBPlace('식당')">DB내 식당<br>(1km 이내)</button>
-            <button class="btn btn-rt-poi" onclick="searchRealtimePlace('POI')">실시간 POI<br>(50m / 평점 4.5↑)</button>
-            <button class="btn btn-rt-res" onclick="searchRealtimePlace('식당')">실시간 식당<br>(50m / 평점 4.7↑)</button>
+            <button class="btn btn-rt-poi" onclick="searchRealtimePlace('POI')">실시간 POI<br>(50m / 평점 4.3↑)</button>
+            <button class="btn btn-rt-res" onclick="searchRealtimePlace('식당')">실시간 식당<br>(50m / 평점 4.2↑)</button>
         </div>
     </div>
 
@@ -197,7 +197,6 @@
         reader.readAsText(file);
     }
 
-    // [강화된 정제 로직] 다양한 한글/영문 키 지원
     function parseAndBuildDatabase(data) {
         const rawDB = data.GeneralDB_v8 || data;
 
@@ -212,14 +211,12 @@
             const item = rawDB[key];
             if (typeof item !== 'object' || item === null) return;
 
-            // 한글/영문 모든 형태의 위도, 경도 추출 및 float 파싱
             const rawLat = item["위도"] || item["lat"] || item["latitude"] || item["LAT"] || item["Latitude"];
             const rawLng = item["경도"] || item["lng"] || item["longitude"] || item["LNG"] || item["Longitude"];
 
             const parsedLat = parseFloat(rawLat);
             const parsedLng = parseFloat(rawLng);
 
-            // 장소명 정제
             const placeName = item["A2_항목"] || item["장소명"] || item["명칭"] || item["A1_항목"] || item["국가명"] || item["name"] || key;
 
             const record = {
@@ -234,7 +231,6 @@
                 desc: item["B1_1"] || item["설명"] || item["개요"] || "상세 정보 없음"
             };
 
-            // POI vs 식당 자동 분류
             const isRestaurant = key.includes("식당") || key.includes("음식") || key.includes("Restaurant") || 
                                  placeName.includes("식당") || placeName.includes("맛집") ||
                                  (item["분류"] && item["분류"].includes("식당"));
@@ -322,8 +318,9 @@
     }
 
     async function searchRealtimePlace(type) {
-        const minRating = (type === 'POI') ? 4.5 : 4.7;
-        document.getElementById('statusBox').innerText = `내 실제 위치 주변 50m 실시간 구글 검색 중...`;
+        // 테스트용 수정 기준: POI는 4.3 이상, 식당은 4.2 이상
+        const minRating = (type === 'POI') ? 4.3 : 4.2;
+        document.getElementById('statusBox').innerText = `내 실제 위치 주변 50m 실시간 구글 검색 중 (평점 ${minRating}점 이상)...`;
 
         let place = null;
 
@@ -358,7 +355,7 @@
         }
 
         if (!place) {
-            document.getElementById('statusBox').innerText = "50m 이내에 조건을 만족하는 실시간 장소가 없습니다. (API Key 확인 권장)";
+            document.getElementById('statusBox').innerText = `50m 이내에 평점 ${minRating}점 이상인 실시간 장소가 없습니다.`;
             return;
         }
 
