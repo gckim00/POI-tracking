@@ -436,7 +436,6 @@ let mapMarkers = [];
 let geocoder = null;
 let currentAddressName = ""; 
 
-// 카테고리별 구글 Places API Primary Type 매핑 객체
 const categoryApiTypeMap = {
     "POI": ["tourist_attraction"],
     "Restaurant": ["restaurant"],
@@ -476,7 +475,6 @@ function extractCleanName(rawName) {
     return parseLocationNameInfo(rawName).cleanName;
 }
 
-// SDK 로드
 async function loadGoogleMapsSdkNew() {
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) return;
@@ -854,12 +852,12 @@ function openGoogleMapPage(name, lat, lng, placeId) {
     window.open(mapUrl, '_blank');
 }
 
-// 드롭다운 메뉴 선택값으로 실시간 검색 트리거하는 함수
 function triggerSelectedSearch() {
     const selectedCategory = document.getElementById('searchCategorySelect').value;
     searchUnified(selectedCategory);
 }
 
+// [핵심 수정] 선택한 카테고리에 맞는 DB만 엄격하게 매칭하여 검색하는 로직
 async function searchUnified(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -873,37 +871,45 @@ async function searchUnified(targetType) {
     statusElem.innerText = `실시간 [${categoryText}] 탐색 수행 중...`;
     statusElem.style.color = "#17a2b8";
 
-    // 1단계: DB 내 탐색 (POI 및 식당 DB에 매칭)
-    let dbKey = 'PoiDB';
-    if (targetType === 'Restaurant') dbKey = 'RestaurantDB';
-    
-    const dbData = JSON.parse(localStorage.getItem(dbKey) || '{}');
     let matchedList = [];
 
-    Object.keys(dbData).forEach(k => {
-        let item = dbData[k];
-        let lat = item.lat || item.latitude || item.위도;
-        let lng = item.lng || item.longitude || item.경도;
-        let rating = parseFloat(item.Rating || item.평점 || 0);
+    // 1단계: DB 탐색 - 카테고리가 'POI'일 때는 PoiDB만, 'Restaurant'일 때는 RestaurantDB만 탐색하도록 엄격 필터링
+    let targetDbKey = null;
+    if (targetType === 'POI') {
+        targetDbKey = 'PoiDB';
+    } else if (targetType === 'Restaurant') {
+        targetDbKey = 'RestaurantDB';
+    }
 
-        if (lat && lng) {
-            let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
-            if (dist <= radiusKm && rating >= minRating) {
-                matchedList.push({ 
-                    type: targetType, 
-                    rawKey: k, 
-                    dist: dist, 
-                    lat: parseFloat(lat), 
-                    lng: parseFloat(lng), 
-                    data: item, 
-                    source: 'DB내',
-                    placeId: item.place_id || null
-                });
+    // 선택한 카테고리가 DB에 존재하는 경우(POI 또는 식당)에만 DB 탐색 수행
+    if (targetDbKey) {
+        const dbData = JSON.parse(localStorage.getItem(targetDbKey) || '{}');
+
+        Object.keys(dbData).forEach(k => {
+            let item = dbData[k];
+            let lat = item.lat || item.latitude || item.위도;
+            let lng = item.lng || item.longitude || item.경도;
+            let rating = parseFloat(item.Rating || item.평점 || 0);
+
+            if (lat && lng) {
+                let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
+                if (dist <= radiusKm && rating >= minRating) {
+                    matchedList.push({ 
+                        type: targetType, 
+                        rawKey: k, 
+                        dist: dist, 
+                        lat: parseFloat(lat), 
+                        lng: parseFloat(lng), 
+                        data: item, 
+                        source: 'DB내',
+                        placeId: item.place_id || null
+                    });
+                }
             }
-        }
-    });
+        });
+    }
 
-    // 2단계: Google Places API (New) 실시간 탐색
+    // 2단계: Google Places API (New) 실시간 탐색 (모든 카테고리 적용)
     const apiKey = document.getElementById('apiKey').value.trim();
     if (apiKey) {
         if (!isSdkLoaded) {
