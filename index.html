@@ -392,21 +392,20 @@ let googleMap = null;
 let mapMarkers = [];
 let geocoder = null;
 
-// 국가_도시_POI, 국가-도시-POI 구조를 감지하여 맨 마지막 장소명만 완벽히 추출하는 함수
+// 국가_도시_POI, 국가_도시_POI_식당명에서 상위 구조를 무조건 지우고 맨 마지막 실제 장소명만 남기는 완벽 정제 함수
 function extractCleanName(rawName) {
     if (!rawName) return "장소";
     let str = String(rawName).trim();
     
-    // 언더바(_), 대시(-), 슬래시(/) 등의 하이러키 구분자를 모두 처리
-    let parts = str.split(/[_/\-]/);
+    // 언더바(_), 대시(-), 슬래시(/) 등 모든 분이문자를 분리하여 유효한 마지막 단어 추출
+    let parts = str.split(/[_/\-]/).map(p => p.trim()).filter(p => p.length > 0);
     if (parts.length > 0) {
-        let lastPart = parts[parts.length - 1].trim();
-        if (lastPart) return lastPart;
+        return parts[parts.length - 1];
     }
     return str;
 }
 
-// SDK 로드 함수 (한글 고정 파라미터 적용)
+// SDK 로드 함수
 async function loadGoogleMapsSdkNew() {
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) return;
@@ -487,7 +486,7 @@ function getCurrentGPSLocation() {
     }
 }
 
-// 명칭 기반 위치 검색 (현재 선택 지역에 우선 순위를 부여하도록 지오코더 보완)
+// 명칭 기반 위치 검색
 function searchLocationByName() {
     const query = document.getElementById('locationSearchInput').value.trim();
     if (!query) {
@@ -496,9 +495,6 @@ function searchLocationByName() {
     }
 
     if (geocoder) {
-        const currentLat = parseFloat(document.getElementById('myLat').value);
-        const currentLng = parseFloat(document.getElementById('myLng').value);
-        
         geocoder.geocode({ 
             address: query,
             language: 'ko'
@@ -738,7 +734,7 @@ function renderItemOnBoardAndList(item) {
     infoList.appendChild(card);
 }
 
-// 구글 지도 이동 함수 (Place ID 및 정확한 좌표를 동시 전달하여 다른 지역 이동 오류 차단)
+// 구글 지도 이동 함수
 function openGoogleMapPage(name, lat, lng, placeId) {
     let mapUrl = "";
     if (placeId) {
@@ -749,7 +745,7 @@ function openGoogleMapPage(name, lat, lng, placeId) {
     window.open(mapUrl, '_blank');
 }
 
-// 실시간 탐색 (지역 경계 및 한국어 적용)
+// 실시간 탐색 (정제된 깔끔한 이름만 다루도록 수정)
 async function searchUnified(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -853,10 +849,13 @@ async function searchUnified(targetType) {
 
     if (matchedList.length > 0) {
         const topItem = matchedList[0];
-        let confirmText = `${radiusKm}Km 이내 조건에 부합하는 [${topItem.name}] 외 ${matchedList.length}곳이 검색되었습니다.\n(가장 가까운 장소 출처: ${topItem.source})\n안내를 진행할까요?`;
+        const cleanTopName = extractCleanName(topItem.name);
+        
+        let confirmText = `${radiusKm}Km 이내 조건에 부합하는 [${cleanTopName}] 외 ${matchedList.length}곳이 검색되었습니다.\n(가장 가까운 장소 출처: ${topItem.source})\n안내를 진행할까요?`;
         
         if (confirm(confirmText)) {
-            let speechMsg = `가장 가까운 장소는 ${topItem.name} 이며, 거리는 ${topItem.dist.toFixed(1)}킬로미터, 평점은 ${topItem.data.Rating || topItem.data.평점}점 입니다.`;
+            // 순수한 장소 이름만 읽어주도록 TTS 메시지 생성
+            let speechMsg = `가장 가까운 장소는 ${cleanTopName} 이며, 거리는 ${topItem.dist.toFixed(1)}킬로미터, 평점은 ${topItem.data.Rating || topItem.data.평점}점 입니다.`;
             speakText(speechMsg);
 
             const infoList = document.getElementById('infoCardList');
