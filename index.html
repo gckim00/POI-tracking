@@ -45,6 +45,7 @@
             gap: 8px;
             margin-bottom: 10px;
             flex-wrap: wrap;
+            align-items: center;
         }
         
         button {
@@ -90,6 +91,17 @@
         }
         button.walk-btn:hover {
             background-color: #e68a00;
+        }
+
+        select.category-select {
+            padding: 5px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #333;
+            cursor: pointer;
         }
         
         #currentStatusText {
@@ -339,12 +351,8 @@
                 <input type="number" id="searchRadius" value="2">
             </div>
             <div class="input-group-narrow">
-                <label for="poiMinRating">POI 최소평점</label>
-                <input type="number" id="poiMinRating" step="0.1" value="4.5">
-            </div>
-            <div class="input-group-narrow">
-                <label for="restMinRating">식당 최소평점</label>
-                <input type="number" id="restMinRating" step="0.1" value="4.7">
+                <label for="searchMinRating">최소평점</label>
+                <input type="number" id="searchMinRating" step="0.1" value="4.0">
             </div>
         </div>
 
@@ -357,8 +365,27 @@
 
         <div class="btn-group">
             <button onclick="renderSpatialData()">설정 반경 시각화</button>
-            <button onclick="searchUnified('POI')">실시간 POI 탐색</button>
-            <button onclick="searchUnified('Restaurant')">실시간 식당 탐색</button>
+            
+            <!-- 드롭다운 메뉴 및 단일 실시간검색 버튼 -->
+            <select id="searchCategorySelect" class="category-select">
+                <option value="POI">관광명소(POI)</option>
+                <option value="Restaurant">식당</option>
+                <option value="Cafe">카페</option>
+                <option value="Supermarket">마트</option>
+                <option value="Pharmacy">약국</option>
+                <option value="GasStation">주유소</option>
+                <option value="ConvenienceStore">편의점</option>
+                <option value="GroceryStore">식료품점</option>
+                <option value="SubwayStation">지하철역</option>
+                <option value="TrainStation">기차역</option>
+                <option value="Doctor">의원</option>
+                <option value="ATM">ATM</option>
+                <option value="Spa">스파 및 마사지</option>
+                <option value="Parking">주차장</option>
+                <option value="Hostel">호스텔</option>
+                <option value="Hotel">호텔</option>
+            </select>
+            <button class="info" onclick="triggerSelectedSearch()">실시간검색</button>
         </div>
 
         <div class="map-wrapper">
@@ -408,6 +435,26 @@ let googleMap = null;
 let mapMarkers = [];
 let geocoder = null;
 let currentAddressName = ""; 
+
+// 카테고리별 구글 Places API Primary Type 매핑 객체
+const categoryApiTypeMap = {
+    "POI": ["tourist_attraction"],
+    "Restaurant": ["restaurant"],
+    "Cafe": ["cafe"],
+    "Supermarket": ["supermarket"],
+    "Pharmacy": ["pharmacy"],
+    "GasStation": ["gas_station"],
+    "ConvenienceStore": ["convenience_store"],
+    "GroceryStore": ["grocery_store"],
+    "SubwayStation": ["subway_station"],
+    "TrainStation": ["train_station"],
+    "Doctor": ["doctor", "medical_clinic"],
+    "ATM": ["atm"],
+    "Spa": ["spa"],
+    "Parking": ["parking"],
+    "Hostel": ["hostel"],
+    "Hotel": ["hotel", "lodging"]
+};
 
 function parseLocationNameInfo(rawName) {
     if (!rawName) return { cleanName: "장소", cityName: "" };
@@ -807,21 +854,30 @@ function openGoogleMapPage(name, lat, lng, placeId) {
     window.open(mapUrl, '_blank');
 }
 
+// 드롭다운 메뉴 선택값으로 실시간 검색 트리거하는 함수
+function triggerSelectedSearch() {
+    const selectedCategory = document.getElementById('searchCategorySelect').value;
+    searchUnified(selectedCategory);
+}
+
 async function searchUnified(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
     const radiusKm = parseFloat(document.getElementById('searchRadius').value);
-    const minRating = targetType === 'POI' 
-        ? parseFloat(document.getElementById('poiMinRating').value)
-        : parseFloat(document.getElementById('restMinRating').value);
+    const minRating = parseFloat(document.getElementById('searchMinRating').value);
+
+    const selectElem = document.getElementById('searchCategorySelect');
+    const categoryText = selectElem.options[selectElem.selectedIndex].text;
 
     const statusElem = document.getElementById('currentStatusText');
-    statusElem.innerText = `실시간 ${targetType} 탐색 수행 중...`;
+    statusElem.innerText = `실시간 [${categoryText}] 탐색 수행 중...`;
     statusElem.style.color = "#17a2b8";
 
-    const dbKey = targetType === 'POI' ? 'PoiDB' : 'RestaurantDB';
+    // 1단계: DB 내 탐색 (POI 및 식당 DB에 매칭)
+    let dbKey = 'PoiDB';
+    if (targetType === 'Restaurant') dbKey = 'RestaurantDB';
+    
     const dbData = JSON.parse(localStorage.getItem(dbKey) || '{}');
-
     let matchedList = [];
 
     Object.keys(dbData).forEach(k => {
@@ -847,6 +903,7 @@ async function searchUnified(targetType) {
         }
     });
 
+    // 2단계: Google Places API (New) 실시간 탐색
     const apiKey = document.getElementById('apiKey').value.trim();
     if (apiKey) {
         if (!isSdkLoaded) {
@@ -855,13 +912,15 @@ async function searchUnified(targetType) {
 
         if (PlaceClass) {
             try {
+                const apiPrimaryTypes = categoryApiTypeMap[targetType] || ["tourist_attraction"];
+
                 const request = {
                     fields: ["displayName", "location", "rating", "formattedAddress", "websiteURI", "nationalPhoneNumber", "regularOpeningHours", "id"],
                     locationRestriction: {
                         center: { lat: myLat, lng: myLng },
                         radius: radiusKm * 1000
                     },
-                    includedPrimaryTypes: targetType === 'POI' ? ["tourist_attraction"] : ["restaurant"],
+                    includedPrimaryTypes: apiPrimaryTypes,
                     language: "ko",
                     maxResultCount: 20
                 };
@@ -911,7 +970,7 @@ async function searchUnified(targetType) {
         const topItem = matchedList[0];
         const cleanTopName = extractCleanName(topItem.rawKey);
         
-        let confirmText = `${radiusKm}Km 이내 조건에 부합하는 [${cleanTopName}] 외 ${matchedList.length}곳이 검색되었습니다.\n안내를 진행할까요?`;
+        let confirmText = `${radiusKm}Km 이내 조건에 부합하는 [${cleanTopName}] 외 ${matchedList.length}곳의 ${categoryText} 항목이 검색되었습니다.\n안내를 진행할까요?`;
         
         if (confirm(confirmText)) {
             let speechMsg = `가장 가까운 장소는 ${cleanTopName} 이며, 거리는 ${topItem.dist.toFixed(1)}킬로미터, 평점은 ${topItem.data.Rating || topItem.data.평점}점 입니다.`;
@@ -934,9 +993,10 @@ async function searchUnified(targetType) {
 
             matchedList.forEach(item => renderItemOnBoardAndList(item));
         }
-        statusElem.innerText = `총 ${matchedList.length}개의 ${targetType} 항목을 거리 순으로 정렬했습니다.`;
+        statusElem.innerText = `총 ${matchedList.length}개의 [${categoryText}] 항목을 거리 순으로 정렬했습니다.`;
     } else {
-        alert(`${radiusKm}Km 이내 조건에 부합하는 장소가 없습니다.`);
+        alert(`${radiusKm}Km 이내 조건에 부합하는 [${categoryText}] 검색 결과가 없습니다.`);
+        statusElem.innerText = "검색 결과가 없습니다.";
     }
 }
 
@@ -987,7 +1047,6 @@ function openTab(evt, tabId) {
     evt.currentTarget.classList.add("active");
 }
 
-// [요청 사항 반영] 시스템 시작 시 안내 팝업 메시지 출력 및 상태 텍스트 설정
 window.onload = function() {
     refreshDatabaseViews();
     renderSpatialData();
