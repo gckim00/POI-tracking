@@ -177,7 +177,6 @@
             margin-bottom: 12px;
         }
 
-        /* 내위치 찾기 및 위치 탐색창 레이아웃 구조 */
         .location-search-box {
             display: flex;
             gap: 8px;
@@ -186,7 +185,7 @@
         }
 
         .location-search-box .btn-gps {
-            margin-right: 12px; /* 내위치 찾기 버튼 오른쪽 여백 */
+            margin-right: 12px;
         }
 
         .location-search-box input {
@@ -300,14 +299,12 @@
     <div class="card">
         <h3>2. 위치 및 공간 탐색 매개변수 설정</h3>
 
-        <!-- 내위치 찾기 - 여백 - [여기서 찾기] - 입력창 레이아웃 -->
         <div class="location-search-box">
             <button class="info btn-gps" onclick="getCurrentGPSLocation()">내위치 찾기</button>
             <button onclick="searchLocationByName()">여기서 찾기</button>
-            <input type="text" id="locationSearchInput" placeholder="장소명, 주소, 도시 입력 (예: 경복궁, 강남역, 과천시청)" onkeydown="if(event.key==='Enter') searchLocationByName()">
+            <input type="text" id="locationSearchInput" placeholder="장소명, 주소, 도시 입력 (예: 경복궁, 과천시청, 파리 에펠탑)" onkeydown="if(event.key==='Enter') searchLocationByName()">
         </div>
         
-        <!-- 반경 및 평점 설정 박스 (기본반경: 4Km, 실시간반경: 2Km) -->
         <div class="input-row-single">
             <div class="input-group-narrow input-group-hidden">
                 <label for="myLat">위도(Lat)</label>
@@ -335,7 +332,6 @@
             </div>
         </div>
 
-        <!-- API Key 입력 박스 -->
         <div class="input-row-second">
             <div class="input-group-narrow" style="width: 100%;">
                 <label for="apiKey">Google Places API Key (선택)</label>
@@ -349,7 +345,6 @@
             <button onclick="searchUnified('Restaurant')">실시간 식당 탐색</button>
         </div>
 
-        <!-- 인터랙티브 구글 지도 영역 -->
         <div class="map-wrapper">
             <div class="zoom-controls">
                 <button class="zoom-btn" onclick="zoomMap(1)" title="Zoom In">+</button>
@@ -397,22 +392,21 @@ let googleMap = null;
 let mapMarkers = [];
 let geocoder = null;
 
-// 상위 하이라키 구조(국가-도시-POI)에서 가장 순수한 마지막 명칭만 추출하는 함수
+// 국가_도시_POI, 국가-도시-POI 구조를 감지하여 맨 마지막 장소명만 완벽히 추출하는 함수
 function extractCleanName(rawName) {
     if (!rawName) return "장소";
     let str = String(rawName).trim();
-    if (str.includes('-')) {
-        let parts = str.split('-');
-        return parts[parts.length - 1].trim();
-    }
-    if (str.includes('/')) {
-        let parts = str.split('/');
-        return parts[parts.length - 1].trim();
+    
+    // 언더바(_), 대시(-), 슬래시(/) 등의 하이러키 구분자를 모두 처리
+    let parts = str.split(/[_/\-]/);
+    if (parts.length > 0) {
+        let lastPart = parts[parts.length - 1].trim();
+        if (lastPart) return lastPart;
     }
     return str;
 }
 
-// 최신 Google Maps SDK 로더 (한글 언어 고정 설정: language=ko)
+// SDK 로드 함수 (한글 고정 파라미터 적용)
 async function loadGoogleMapsSdkNew() {
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) return;
@@ -439,7 +433,7 @@ async function loadGoogleMapsSdkNew() {
                         m.head.append(a);
                     }));
                 d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n));
-            })({ key: apiKey, v: "weekly", language: "ko" }); // 한글 표기 적용
+            })({ key: apiKey, v: "weekly", language: "ko" });
         }
 
         const placesLib = await google.maps.importLibrary("places");
@@ -449,14 +443,14 @@ async function loadGoogleMapsSdkNew() {
         isSdkLoaded = true;
         initGoogleMap();
         initAutocomplete();
-        document.getElementById('currentStatusText').innerText = "Google Places API (New) 및 Google Maps 연동 완료 (한글 적용)";
+        document.getElementById('currentStatusText').innerText = "Google Places API (New) 및 Google Maps 연동 완료 (한국어 적용)";
     } catch (err) {
         console.error("Google Maps SDK 로딩 실패", err);
         document.getElementById('currentStatusText').innerText = "API 키 검증 및 SDK 로딩 실패";
     }
 }
 
-// 자동완성 탐색 기능 등록
+// 자동완성
 function initAutocomplete() {
     const input = document.getElementById('locationSearchInput');
     if (window.google && window.google.maps && window.google.maps.places) {
@@ -472,7 +466,7 @@ function initAutocomplete() {
     }
 }
 
-// 현재 위치 GPS 불러오기
+// GPS 위치
 function getCurrentGPSLocation() {
     if (navigator.geolocation) {
         document.getElementById('currentStatusText').innerText = "현재 위치(GPS) 정보 조회 중...";
@@ -493,7 +487,7 @@ function getCurrentGPSLocation() {
     }
 }
 
-// 텍스트 명칭 기반 위치 검색
+// 명칭 기반 위치 검색 (현재 선택 지역에 우선 순위를 부여하도록 지오코더 보완)
 function searchLocationByName() {
     const query = document.getElementById('locationSearchInput').value.trim();
     if (!query) {
@@ -502,7 +496,13 @@ function searchLocationByName() {
     }
 
     if (geocoder) {
-        geocoder.geocode({ address: query }, (results, status) => {
+        const currentLat = parseFloat(document.getElementById('myLat').value);
+        const currentLng = parseFloat(document.getElementById('myLng').value);
+        
+        geocoder.geocode({ 
+            address: query,
+            language: 'ko'
+        }, (results, status) => {
             if (status === "OK" && results[0]) {
                 const loc = results[0].geometry.location;
                 updateSearchLocation(loc.lat(), loc.lng(), query);
@@ -515,7 +515,7 @@ function searchLocationByName() {
     }
 }
 
-// 검색 기준 위치 변수 업데이트
+// 기준점 위치 설정
 function updateSearchLocation(lat, lng, label) {
     document.getElementById('myLat').value = lat;
     document.getElementById('myLng').value = lng;
@@ -529,7 +529,7 @@ function updateSearchLocation(lat, lng, label) {
     document.getElementById('currentStatusText').innerText = `'${extractCleanName(label)}' 기준점이 설정되었습니다.`;
 }
 
-// 구글 지도 객체 초기화
+// 구글 지도 객체 생성
 function initGoogleMap() {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -545,7 +545,6 @@ function initGoogleMap() {
     }
 }
 
-// 지도 Zoom In / Out 제어
 function zoomMap(delta) {
     if (googleMap) {
         let currentZoom = googleMap.getZoom();
@@ -555,7 +554,6 @@ function zoomMap(delta) {
     }
 }
 
-// 거리 계산 (Haversine)
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -567,7 +565,6 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
-// JSON 불러오기
 function importSystemDataFromFile() {
     const fileInput = document.createElement("input");
     fileInput.type = "file"; 
@@ -627,7 +624,6 @@ function importSystemDataFromFile() {
     fileInput.click();
 }
 
-// 기존 마커 초기화
 function clearMapMarkers() {
     mapMarkers.forEach(m => m.setMap(null));
     mapMarkers = [];
@@ -667,7 +663,7 @@ function renderSpatialData() {
         if (lat && lng) {
             let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
             if (dist <= maxRadiusKm) {
-                allItems.push({ type: 'POI', name: extractCleanName(k), dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내' });
+                allItems.push({ type: 'POI', name: extractCleanName(k), dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내', placeId: item.place_id || null });
             }
         }
     });
@@ -679,7 +675,7 @@ function renderSpatialData() {
         if (lat && lng) {
             let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
             if (dist <= maxRadiusKm) {
-                allItems.push({ type: 'Restaurant', name: extractCleanName(k), dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내' });
+                allItems.push({ type: 'Restaurant', name: extractCleanName(k), dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내', placeId: item.place_id || null });
             }
         }
     });
@@ -688,7 +684,7 @@ function renderSpatialData() {
     allItems.forEach(item => renderItemOnBoardAndList(item));
 }
 
-// 개별 카드 및 지도 마커 등록 (상위 하이라키 제거된 정식명 적용)
+// 개별 카드 및 지도 마커 등록
 function renderItemOnBoardAndList(item) {
     const infoList = document.getElementById('infoCardList');
     const cleanName = extractCleanName(item.name);
@@ -706,7 +702,7 @@ function renderItemOnBoardAndList(item) {
         });
 
         marker.addListener('click', () => {
-            openGoogleMapPage(cleanName, item.lat, item.lng);
+            openGoogleMapPage(cleanName, item.lat, item.lng, item.placeId);
         });
 
         mapMarkers.push(marker);
@@ -736,19 +732,24 @@ function renderItemOnBoardAndList(item) {
     `;
 
     card.onclick = () => {
-        openGoogleMapPage(cleanName, item.lat, item.lng);
+        openGoogleMapPage(cleanName, item.lat, item.lng, item.placeId);
     };
 
     infoList.appendChild(card);
 }
 
-// 구글 지도 상세 이동
-function openGoogleMapPage(name, lat, lng) {
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=&center=${lat},${lng}`;
+// 구글 지도 이동 함수 (Place ID 및 정확한 좌표를 동시 전달하여 다른 지역 이동 오류 차단)
+function openGoogleMapPage(name, lat, lng, placeId) {
+    let mapUrl = "";
+    if (placeId) {
+        mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=${placeId}`;
+    } else {
+        mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    }
     window.open(mapUrl, '_blank');
 }
 
-// 통합 실시간 탐색 (상위 하이라키 파싱 반영)
+// 실시간 탐색 (지역 경계 및 한국어 적용)
 async function searchUnified(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -764,7 +765,7 @@ async function searchUnified(targetType) {
 
     let matchedList = [];
 
-    // 1단계: DB 내 탐색 (이름 파싱 적용)
+    // 1단계: DB 내 탐색
     Object.keys(dbData).forEach(k => {
         let item = dbData[k];
         let lat = item.lat || item.latitude || item.위도;
@@ -781,13 +782,14 @@ async function searchUnified(targetType) {
                     lat: parseFloat(lat), 
                     lng: parseFloat(lng), 
                     data: item, 
-                    source: 'DB내' 
+                    source: 'DB내',
+                    placeId: item.place_id || null
                 });
             }
         }
     });
 
-    // 2단계: API Key 입력 시 실시간 구글 API 탐색 진행
+    // 2단계: 실시간 API 탐색
     const apiKey = document.getElementById('apiKey').value.trim();
     if (apiKey) {
         if (!isSdkLoaded) {
@@ -797,13 +799,13 @@ async function searchUnified(targetType) {
         if (PlaceClass) {
             try {
                 const request = {
-                    fields: ["displayName", "location", "rating", "formattedAddress", "websiteURI", "nationalPhoneNumber", "regularOpeningHours"],
+                    fields: ["displayName", "location", "rating", "formattedAddress", "websiteURI", "nationalPhoneNumber", "regularOpeningHours", "id"],
                     locationRestriction: {
                         center: { lat: myLat, lng: myLng },
                         radius: radiusKm * 1000
                     },
                     includedPrimaryTypes: targetType === 'POI' ? ["tourist_attraction"] : ["restaurant"],
-                    language: "ko", // 한글 언어 요청
+                    language: "ko",
                     maxResultCount: 20
                 };
 
@@ -834,7 +836,8 @@ async function searchUnified(targetType) {
                                         홈페이지: p.websiteURI || "정보 없음", 
                                         전화번호: p.nationalPhoneNumber || "정보 없음" 
                                     },
-                                    source: '실시간'
+                                    source: '실시간',
+                                    placeId: p.id || null
                                 });
                             }
                         }
