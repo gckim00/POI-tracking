@@ -81,6 +81,16 @@
         button.info:hover {
             background-color: #138496;
         }
+
+        button.walk-btn {
+            background-color: #ff9800;
+            color: white;
+            padding: 6px 10px;
+            white-space: nowrap;
+        }
+        button.walk-btn:hover {
+            background-color: #e68a00;
+        }
         
         #currentStatusText {
             font-weight: bold;
@@ -269,6 +279,12 @@
             border-left-color: #28a745;
         }
 
+        .card-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .badge-source {
             font-size: 10px;
             padding: 2px 6px;
@@ -397,7 +413,7 @@ function extractCleanName(rawName) {
     if (!rawName) return "장소";
     let str = String(rawName).trim();
     
-    // 언더바(_), 대시(-), 슬래시(/) 등 모든 분이문자를 분리하여 유효한 마지막 단어 추출
+    // 언더바(_), 대시(-), 슬래시(/) 등 모든 분리문자를 분리하여 유효한 마지막 단어 추출
     let parts = str.split(/[_/\-]/).map(p => p.trim()).filter(p => p.length > 0);
     if (parts.length > 0) {
         return parts[parts.length - 1];
@@ -722,7 +738,8 @@ function renderItemOnBoardAndList(item) {
             주소: ${address}<br>
             홈페이지: ${web} | 전화번호: ${phone}
         </div>
-        <div>
+        <div class="card-actions">
+            <button class="walk-btn" onclick="openWalkingDirections(event, ${item.lat}, ${item.lng}, '${cleanName}', '${item.placeId || ''}')">걸어가기</button>
             <span class="badge-source ${badgeClass}">${item.source}</span>
         </div>
     `;
@@ -732,6 +749,23 @@ function renderItemOnBoardAndList(item) {
     };
 
     infoList.appendChild(card);
+}
+
+// 현위치/기준점부터 목적지까지 도보 길찾기 구글 맵 연결 함수
+function openWalkingDirections(event, destLat, destLng, destName, placeId) {
+    event.stopPropagation(); // 카드 클릭 이벤트(일반 장소 보기) 중복 실행 방지
+
+    const startLat = parseFloat(document.getElementById('myLat').value);
+    const startLng = parseFloat(document.getElementById('myLng').value);
+
+    let walkUrl = "";
+    if (placeId) {
+        walkUrl = `https://www.google.com/maps/dir/?api=1&origin=${startLat},${startLng}&destination=${encodeURIComponent(destName)}&destination_place_id=${placeId}&travelmode=walking`;
+    } else {
+        walkUrl = `https://www.google.com/maps/dir/?api=1&origin=${startLat},${startLng}&destination=${destLat},${destLng}&travelmode=walking`;
+    }
+
+    window.open(walkUrl, '_blank');
 }
 
 // 구글 지도 이동 함수
@@ -929,8 +963,18 @@ function openTab(evt, tabId) {
     evt.currentTarget.classList.add("active");
 }
 
+// 페이지 최초 로드 시 실행 및 JSON 업로드 상태 점검
 window.onload = function() {
     refreshDatabaseViews();
+
+    const poiDB = JSON.parse(localStorage.getItem('PoiDB') || '{}');
+    const restDB = JSON.parse(localStorage.getItem('RestaurantDB') || '{}');
+
+    // DB에 데이터가 비어있는지 확인
+    if (Object.keys(poiDB).length === 0 && Object.keys(restDB).length === 0) {
+        document.getElementById('currentStatusText').innerText = "경고: 로드된 시스템 데이터가 없습니다. JSON 파일을 업로드 해주세요.";
+        alert("시스템 데이터가 존재하지 않습니다.\n상단의 [DB에서 불러오기] 버튼을 눌러 JSON 파일을 먼저 업로드 해주세요.");
+    }
 };
 </script>
 
