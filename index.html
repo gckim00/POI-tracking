@@ -285,7 +285,7 @@
             </div>
             <div class="input-group" style="grid-column: span 2;">
                 <label for="apiKey">Google Places API Key (선택):</label>
-                <input type="password" id="apiKey" placeholder="API Key 입력 시 로컬서버(http://) 환경에서 작동" onchange="loadGoogleMapsScript()">
+                <input type="password" id="apiKey" placeholder="API Key 입력 후 엔터 또는 포커스 이동" onchange="loadGoogleMapsSdkNew()">
             </div>
         </div>
 
@@ -335,49 +335,53 @@
     </div>
 </div>
 
-<div id="dummyMap" style="display:none;"></div>
-
 <script>
-let googlePlacesService = null;
+let isSdkLoaded = false;
+let PlaceClass = null;
 
-function loadGoogleMapsScript() {
-    if (window.location.protocol === 'file:') {
-        alert("file:// 로컬 파일 환경에서는 보안 정책으로 인해 Google API 스크립트를 불러올 수 없습니다. Live Server 등 로컬 웹 서버(http://)를 사용하여 실행해 주세요.");
-        return;
-    }
-
+// 최신 Google Maps Places API (New) 로더 함수
+async function loadGoogleMapsSdkNew() {
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) return;
 
-    if (window.google && window.google.maps) {
-        initPlacesService();
+    if (window.location.protocol === 'file:') {
+        alert("file:// 환경에서는 보안 차단으로 API 연동이 제한됩니다. GitHub Pages 또는 로컬서버(http://) 환경을 이용해주세요.");
         return;
     }
 
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initPlacesService`;
-    script.async = true;
-    script.onerror = function() {
-        alert("Google Maps 스크립트를 불러올 수 없습니다. API Key 및 도메인 설정을 확인해주세요.");
-        document.getElementById('currentStatusText').innerText = "Google API 스크립트 로드 실패";
-    };
-    document.head.appendChild(script);
-}
-
-function initPlacesService() {
     try {
-        const dummyDiv = document.getElementById('dummyMap');
-        const map = new google.maps.Map(dummyDiv, {
-            center: { lat: 37.5665, lng: 126.9780 },
-            zoom: 15
-        });
-        googlePlacesService = new google.maps.places.PlacesService(map);
-        document.getElementById('currentStatusText').innerText = "Google Places API 연동 준비 완료";
-    } catch (e) {
-        console.error("SDK 초기화 오류", e);
+        if (!window.google || !window.google.maps) {
+            // Google Maps Bootstrap Loader 적용
+            ((g) => {
+                var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__", m = document, b = window;
+                b = b[c] || (b[c] = {});
+                var d = b.maps || (b.maps = {}), r = new Set, e = new URLSearchParams,
+                    u = () => h || (h = new Promise(async (f, n) => {
+                        await (a = m.createElement("script"));
+                        e.set("libraries", [...r] + "");
+                        for (k in g) e.set(k.replace(/[A-Z]/g, (t) => "_" + t[0].toLowerCase()), g[k]);
+                        e.set("callback", c + ".maps." + q);
+                        a.src = `https://maps.${c}apis.com/maps/api/js?` + e;
+                        d[q] = f;
+                        a.onerror = () => h = n(Error(p + " could not load."));
+                        m.head.append(a);
+                    }));
+                d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n));
+            })({ key: apiKey, v: "weekly" });
+        }
+
+        const placesLib = await google.maps.importLibrary("places");
+        PlaceClass = placesLib.Place;
+        isSdkLoaded = true;
+        document.getElementById('currentStatusText').innerText = "Google Places API (New) 연동 완료";
+    } catch (err) {
+        console.error("Google Maps SDK 로딩 실패", err);
+        document.getElementById('currentStatusText').innerText = "API 키 검증 및 SDK 로딩 실패";
+        alert("Google Maps SDK를 로드하지 못했습니다. API 키 및 연동 권한을 확인해주세요.");
     }
 }
 
+// 거리 계산 (Haversine)
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -389,6 +393,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
+// 1. JSON 불러오기
 function importSystemDataFromFile() {
     const fileInput = document.createElement("input");
     fileInput.type = "file"; 
@@ -458,6 +463,7 @@ function importSystemDataFromFile() {
     fileInput.click();
 }
 
+// 2. JSON 내보내기
 function exportSystemDataToFile() {
     try {
         const countryDB = JSON.parse(localStorage.getItem('CountryDB') || '{}');
@@ -496,6 +502,7 @@ function exportSystemDataToFile() {
     }
 }
 
+// 3. 반경 내 시각화
 function renderSpatialData() {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -592,6 +599,7 @@ function renderItemOnBoardAndList(item, myLat, myLng) {
     infoList.appendChild(card);
 }
 
+// 4. DB 내 검색
 function showDbItemsWithin(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -629,9 +637,10 @@ function showDbItemsWithin(targetType) {
     matchedList.sort((a, b) => a.dist - b.dist);
     matchedList.forEach(item => renderItemOnBoardAndList(item, myLat, myLng));
 
-    document.getElementById('currentStatusText').innerText = `${radiusKm}Km 이내 DB 내 ${targetType} ${matchedList.length}개를 거리가 가까운 순서로 정렬했습니다.`;
+    document.getElementById('currentStatusText').innerText = `${radiusKm}Km 이내 DB 내 ${targetType} ${matchedList.length}개를 정렬했습니다.`;
 }
 
+// 5. 실시간 검색 (Places API New 기준)
 async function searchRealtime(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -647,7 +656,7 @@ async function searchRealtime(targetType) {
 
     let matchedList = [];
 
-    // 1단계: DB 내 데이터 탐색
+    // 1단계: DB 내 탐색
     Object.keys(dbData).forEach(k => {
         let item = dbData[k];
         let lat = item.lat || item.latitude || item.위도;
@@ -662,50 +671,55 @@ async function searchRealtime(targetType) {
         }
     });
 
-    // 2단계: Google SDK 사용 실시간 검색
+    // 2단계: Places API (New) 실시간 검색
     const apiKey = document.getElementById('apiKey').value.trim();
     if (apiKey) {
-        if (window.location.protocol === 'file:') {
-            alert("file:// 환경에서는 구글 API 연동이 차단됩니다. 로컬 서버(http://) 환경에서 실행해주세요.");
-            document.getElementById('currentStatusText').innerText = "로컬 서버 환경 필요";
-            return;
+        if (!isSdkLoaded) {
+            await loadGoogleMapsSdkNew();
         }
 
-        if (!googlePlacesService) {
-            loadGoogleMapsScript();
-            alert("Google API SDK 로드 중입니다. 잠시 후 다시 시도해주세요.");
-            document.getElementById('currentStatusText').innerText = "Google API 초기화 중...";
-            return;
-        }
+        if (PlaceClass) {
+            try {
+                const request = {
+                    fields: ["displayName", "location", "rating", "websiteUri", "internationalPhoneNumber"],
+                    locationRestriction: {
+                        center: { lat: myLat, lng: myLng },
+                        radius: radiusKm * 1000
+                    },
+                    includedPrimaryTypes: targetType === 'POI' ? ["tourist_attraction"] : ["restaurant"],
+                    maxResultCount: 20
+                };
 
-        try {
-            let apiResults = await fetchPlacesViaSDK(myLat, myLng, radiusKm * 1000, targetType);
-            apiResults.forEach(p => {
-                let pRating = p.rating || 0;
-                if (pRating >= minRating && p.geometry && p.geometry.location) {
-                    let lat = p.geometry.location.lat();
-                    let lng = p.geometry.location.lng();
-                    let dist = calculateDistance(myLat, myLng, lat, lng);
-                    if (dist <= radiusKm) {
-                        matchedList.push({
-                            type: targetType,
-                            name: p.name,
-                            dist: dist,
-                            lat: lat,
-                            lng: lng,
-                            data: { 
-                                Rating: pRating, 
-                                영업시간: p.opening_hours && p.opening_hours.isOpen ? (p.opening_hours.isOpen() ? "영업 중" : "영업 종료") : "정보 없음", 
-                                홈페이지: p.vicinity || "API 실시간 조회", 
-                                전화번호: "API 실시간 조회" 
-                            },
-                            source: 'Google API'
-                        });
-                    }
+                const { places } = await PlaceClass.searchNearby(request);
+                if (places && places.length > 0) {
+                    places.forEach(p => {
+                        let pRating = p.rating || 0;
+                        if (pRating >= minRating && p.location) {
+                            let lat = p.location.lat();
+                            let lng = p.location.lng();
+                            let dist = calculateDistance(myLat, myLng, lat, lng);
+                            if (dist <= radiusKm) {
+                                matchedList.push({
+                                    type: targetType,
+                                    name: p.displayName || "실시간 장소",
+                                    dist: dist,
+                                    lat: lat,
+                                    lng: lng,
+                                    data: { 
+                                        Rating: pRating, 
+                                        영업시간: "API 실시간 조회", 
+                                        홈페이지: p.websiteUri || "정보 없음", 
+                                        전화번호: p.internationalPhoneNumber || "정보 없음" 
+                                    },
+                                    source: 'Google API'
+                                });
+                            }
+                        }
+                    });
                 }
-            });
-        } catch (e) {
-            console.error("Google API 조회 오류", e);
+            } catch (err) {
+                console.error("New Places API 검색 실패:", err);
+            }
         }
     }
 
@@ -738,29 +752,6 @@ async function searchRealtime(targetType) {
         alert(`${radiusKm}Km 이내 조건(평점 ${minRating} 이상)에 부합하는 장소가 없습니다.`);
         document.getElementById('currentStatusText').innerText = "검색 결과가 없습니다.";
     }
-}
-
-function fetchPlacesViaSDK(lat, lng, radiusMeter, targetType) {
-    return new Promise((resolve) => {
-        const request = {
-            location: new google.maps.LatLng(lat, lng),
-            radius: radiusMeter,
-            type: targetType === 'POI' ? ['tourist_attraction'] : ['restaurant']
-        };
-
-        const timer = setTimeout(() => {
-            resolve([]);
-        }, 5000);
-
-        googlePlacesService.nearbySearch(request, (results, status) => {
-            clearTimeout(timer);
-            if (status === google.maps.places.PlacesServiceStatus.OK || status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-                resolve(results || []);
-            } else {
-                resolve([]);
-            }
-        });
-    });
 }
 
 function speakText(text) {
