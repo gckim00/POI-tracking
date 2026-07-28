@@ -82,7 +82,6 @@
             background-color: #138496;
         }
         
-        /* 30% 커진 결과 안내 코멘트 폰트 (기존 11px -> 약 14.3px) */
         #currentStatusText {
             font-weight: bold;
             color: #17a2b8;
@@ -152,7 +151,6 @@
             min-width: 0;
         }
 
-        /* 위도 경도 숨김용 스티일 */
         .input-group-hidden {
             display: none !important;
         }
@@ -179,11 +177,16 @@
             margin-bottom: 12px;
         }
 
+        /* 내위치 찾기 및 위치 탐색창 레이아웃 구조 */
         .location-search-box {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             margin-bottom: 10px;
             align-items: center;
+        }
+
+        .location-search-box .btn-gps {
+            margin-right: 12px; /* 내위치 찾기 버튼 오른쪽 여백 */
         }
 
         .location-search-box input {
@@ -297,14 +300,14 @@
     <div class="card">
         <h3>2. 위치 및 공간 탐색 매개변수 설정</h3>
 
-        <!-- 위치 탐색 및 내 위치 지정 영역 -->
+        <!-- 내위치 찾기 - 여백 - [여기서 찾기] - 입력창 레이아웃 -->
         <div class="location-search-box">
-            <button class="info" onclick="getCurrentGPSLocation()">내위치 찾기</button>
-            <input type="text" id="locationSearchInput" placeholder="장소명, 주소, 도시 검색 (예: 경복궁, 강남역, 토론토)" onkeydown="if(event.key==='Enter') searchLocationByName()">
-            <button onclick="searchLocationByName()">위치 이동</button>
+            <button class="info btn-gps" onclick="getCurrentGPSLocation()">내위치 찾기</button>
+            <button onclick="searchLocationByName()">여기서 찾기</button>
+            <input type="text" id="locationSearchInput" placeholder="장소명, 주소, 도시 입력 (예: 경복궁, 강남역, 과천시청)" onkeydown="if(event.key==='Enter') searchLocationByName()">
         </div>
         
-        <!-- 서치 조건 조율 박스 (위도/경도는 숨김 처리) -->
+        <!-- 반경 및 평점 설정 박스 (기본반경: 4Km, 실시간반경: 2Km) -->
         <div class="input-row-single">
             <div class="input-group-narrow input-group-hidden">
                 <label for="myLat">위도(Lat)</label>
@@ -316,11 +319,11 @@
             </div>
             <div class="input-group-narrow">
                 <label for="mapRadius">기본반경(Km)</label>
-                <input type="number" id="mapRadius" value="50">
+                <input type="number" id="mapRadius" value="4">
             </div>
             <div class="input-group-narrow">
                 <label for="searchRadius">실시간반경(Km)</label>
-                <input type="number" id="searchRadius" value="20">
+                <input type="number" id="searchRadius" value="2">
             </div>
             <div class="input-group-narrow">
                 <label for="poiMinRating">POI 최소평점</label>
@@ -346,7 +349,7 @@
             <button onclick="searchUnified('Restaurant')">실시간 식당 탐색</button>
         </div>
 
-        <!-- 인터랙티브 구글 지도 영역 및 확대/축소 버튼 -->
+        <!-- 인터랙티브 구글 지도 영역 -->
         <div class="map-wrapper">
             <div class="zoom-controls">
                 <button class="zoom-btn" onclick="zoomMap(1)" title="Zoom In">+</button>
@@ -394,7 +397,22 @@ let googleMap = null;
 let mapMarkers = [];
 let geocoder = null;
 
-// Google Maps SDK 동적 로더
+// 상위 하이라키 구조(국가-도시-POI)에서 가장 순수한 마지막 명칭만 추출하는 함수
+function extractCleanName(rawName) {
+    if (!rawName) return "장소";
+    let str = String(rawName).trim();
+    if (str.includes('-')) {
+        let parts = str.split('-');
+        return parts[parts.length - 1].trim();
+    }
+    if (str.includes('/')) {
+        let parts = str.split('/');
+        return parts[parts.length - 1].trim();
+    }
+    return str;
+}
+
+// 최신 Google Maps SDK 로더 (한글 언어 고정 설정: language=ko)
 async function loadGoogleMapsSdkNew() {
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) return;
@@ -421,7 +439,7 @@ async function loadGoogleMapsSdkNew() {
                         m.head.append(a);
                     }));
                 d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n));
-            })({ key: apiKey, v: "weekly" });
+            })({ key: apiKey, v: "weekly", language: "ko" }); // 한글 표기 적용
         }
 
         const placesLib = await google.maps.importLibrary("places");
@@ -431,7 +449,7 @@ async function loadGoogleMapsSdkNew() {
         isSdkLoaded = true;
         initGoogleMap();
         initAutocomplete();
-        document.getElementById('currentStatusText').innerText = "Google Places API (New) 및 Google Maps 연동 완료";
+        document.getElementById('currentStatusText').innerText = "Google Places API (New) 및 Google Maps 연동 완료 (한글 적용)";
     } catch (err) {
         console.error("Google Maps SDK 로딩 실패", err);
         document.getElementById('currentStatusText').innerText = "API 키 검증 및 SDK 로딩 실패";
@@ -493,22 +511,22 @@ function searchLocationByName() {
             }
         });
     } else {
-        alert("구글 지도 SDK가 연동되지 않았습니다. API Key를 설정하거나 '내위치 찾기'를 사용해 주세요.");
+        alert("구글 지도 SDK가 연동되지 않았습니다. API Key를 입력하여 SDK를 연동해 주세요.");
     }
 }
 
-// 검색 기준 위치 변수 업데이트 및 지도 재설정
+// 검색 기준 위치 변수 업데이트
 function updateSearchLocation(lat, lng, label) {
     document.getElementById('myLat').value = lat;
     document.getElementById('myLng').value = lng;
 
     if (googleMap) {
         googleMap.setCenter({ lat: lat, lng: lng });
-        googleMap.setZoom(12);
+        googleMap.setZoom(13);
     }
 
     renderSpatialData();
-    document.getElementById('currentStatusText').innerText = `'${label}' 탐색 기준점이 설정되었습니다.`;
+    document.getElementById('currentStatusText').innerText = `'${extractCleanName(label)}' 기준점이 설정되었습니다.`;
 }
 
 // 구글 지도 객체 초기화
@@ -520,7 +538,7 @@ function initGoogleMap() {
     if (window.google && window.google.maps) {
         googleMap = new google.maps.Map(mapElement, {
             center: { lat: myLat, lng: myLng },
-            zoom: 11,
+            zoom: 13,
             disableDefaultUI: false,
             zoomControl: false
         });
@@ -649,7 +667,7 @@ function renderSpatialData() {
         if (lat && lng) {
             let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
             if (dist <= maxRadiusKm) {
-                allItems.push({ type: 'POI', name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내' });
+                allItems.push({ type: 'POI', name: extractCleanName(k), dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내' });
             }
         }
     });
@@ -661,7 +679,7 @@ function renderSpatialData() {
         if (lat && lng) {
             let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
             if (dist <= maxRadiusKm) {
-                allItems.push({ type: 'Restaurant', name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내' });
+                allItems.push({ type: 'Restaurant', name: extractCleanName(k), dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내' });
             }
         }
     });
@@ -670,9 +688,10 @@ function renderSpatialData() {
     allItems.forEach(item => renderItemOnBoardAndList(item));
 }
 
-// 개별 카드 생성 및 지도 마커 등록
+// 개별 카드 및 지도 마커 등록 (상위 하이라키 제거된 정식명 적용)
 function renderItemOnBoardAndList(item) {
     const infoList = document.getElementById('infoCardList');
+    const cleanName = extractCleanName(item.name);
 
     if (googleMap) {
         let iconUrl = item.type === 'POI' 
@@ -682,12 +701,12 @@ function renderItemOnBoardAndList(item) {
         let marker = new google.maps.Marker({
             position: { lat: item.lat, lng: item.lng },
             map: googleMap,
-            title: item.name,
+            title: cleanName,
             icon: iconUrl
         });
 
         marker.addListener('click', () => {
-            openGoogleMapPage(item.name, item.lat, item.lng);
+            openGoogleMapPage(cleanName, item.lat, item.lng);
         });
 
         mapMarkers.push(marker);
@@ -706,7 +725,7 @@ function renderItemOnBoardAndList(item) {
 
     card.innerHTML = `
         <div>
-            <strong>[${item.name}]</strong> - 거리: ${item.dist.toFixed(2)} Km<br>
+            <strong>[${cleanName}]</strong> - 거리: ${item.dist.toFixed(2)} Km<br>
             평점: ${rating} | 영업시간: ${hours}<br>
             주소: ${address}<br>
             홈페이지: ${web} | 전화번호: ${phone}
@@ -717,19 +736,19 @@ function renderItemOnBoardAndList(item) {
     `;
 
     card.onclick = () => {
-        openGoogleMapPage(item.name, item.lat, item.lng);
+        openGoogleMapPage(cleanName, item.lat, item.lng);
     };
 
     infoList.appendChild(card);
 }
 
-// 구글 지도 상세 연결 이동
+// 구글 지도 상세 이동
 function openGoogleMapPage(name, lat, lng) {
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=&center=${lat},${lng}`;
     window.open(mapUrl, '_blank');
 }
 
-// 통합 실시간 탐색 (DB 선조회 -> 없거나 필요 시 실시간 API 탐색)
+// 통합 실시간 탐색 (상위 하이라키 파싱 반영)
 async function searchUnified(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -745,7 +764,7 @@ async function searchUnified(targetType) {
 
     let matchedList = [];
 
-    // 1단계: DB 내 탐색
+    // 1단계: DB 내 탐색 (이름 파싱 적용)
     Object.keys(dbData).forEach(k => {
         let item = dbData[k];
         let lat = item.lat || item.latitude || item.위도;
@@ -757,7 +776,7 @@ async function searchUnified(targetType) {
             if (dist <= radiusKm && rating >= minRating) {
                 matchedList.push({ 
                     type: targetType, 
-                    name: k, 
+                    name: extractCleanName(k), 
                     dist: dist, 
                     lat: parseFloat(lat), 
                     lng: parseFloat(lng), 
@@ -784,6 +803,7 @@ async function searchUnified(targetType) {
                         radius: radiusKm * 1000
                     },
                     includedPrimaryTypes: targetType === 'POI' ? ["tourist_attraction"] : ["restaurant"],
+                    language: "ko", // 한글 언어 요청
                     maxResultCount: 20
                 };
 
@@ -796,12 +816,14 @@ async function searchUnified(targetType) {
                             let lng = typeof p.location.lng === 'function' ? p.location.lng() : p.location.lng;
                             let dist = calculateDistance(myLat, myLng, lat, lng);
                             
-                            let existsInDb = matchedList.some(item => item.name === p.displayName);
+                            let cleanPlaceName = extractCleanName(p.displayName);
+                            let existsInDb = matchedList.some(item => extractCleanName(item.name) === cleanPlaceName);
+                            
                             if (dist <= radiusKm && !existsInDb) {
                                 let isOpen = p.regularOpeningHours ? (p.regularOpeningHours.openNow ? "영업 중" : "영업 종료") : "정보 없음";
                                 matchedList.push({
                                     type: targetType,
-                                    name: p.displayName || "실시간 장소",
+                                    name: cleanPlaceName,
                                     dist: dist,
                                     lat: lat,
                                     lng: lng,
