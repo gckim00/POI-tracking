@@ -285,7 +285,7 @@
             </div>
             <div class="input-group" style="grid-column: span 2;">
                 <label for="apiKey">Google Places API Key (선택):</label>
-                <input type="password" id="apiKey" placeholder="API Key 입력 후 엔터 또는 포커스 이동" onchange="loadGoogleMapsSdkNew()">
+                <input type="password" id="apiKey" placeholder="API Key 입력 후 포커스 이동 시 SDK 자동 로드" onchange="loadGoogleMapsSdkNew()">
             </div>
         </div>
 
@@ -339,7 +339,7 @@
 let isSdkLoaded = false;
 let PlaceClass = null;
 
-// 최신 Google Maps Places API (New) 로더 함수
+// 최신 Google Maps Places API (New) 동적 로더
 async function loadGoogleMapsSdkNew() {
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) return;
@@ -351,7 +351,6 @@ async function loadGoogleMapsSdkNew() {
 
     try {
         if (!window.google || !window.google.maps) {
-            // Google Maps Bootstrap Loader 적용
             ((g) => {
                 var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__", m = document, b = window;
                 b = b[c] || (b[c] = {});
@@ -640,7 +639,7 @@ function showDbItemsWithin(targetType) {
     document.getElementById('currentStatusText').innerText = `${radiusKm}Km 이내 DB 내 ${targetType} ${matchedList.length}개를 정렬했습니다.`;
 }
 
-// 5. 실시간 검색 (Places API New 기준)
+// 5. 실시간 검색 (Places API New 수정 반영)
 async function searchRealtime(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -680,8 +679,9 @@ async function searchRealtime(targetType) {
 
         if (PlaceClass) {
             try {
+                // websiteURI 및 nationalPhoneNumber 대문자 규격 반영
                 const request = {
-                    fields: ["displayName", "location", "rating", "websiteUri", "internationalPhoneNumber"],
+                    fields: ["displayName", "location", "rating", "websiteURI", "nationalPhoneNumber"],
                     locationRestriction: {
                         center: { lat: myLat, lng: myLng },
                         radius: radiusKm * 1000
@@ -708,8 +708,8 @@ async function searchRealtime(targetType) {
                                     data: { 
                                         Rating: pRating, 
                                         영업시간: "API 실시간 조회", 
-                                        홈페이지: p.websiteUri || "정보 없음", 
-                                        전화번호: p.internationalPhoneNumber || "정보 없음" 
+                                        홈페이지: p.websiteURI || "정보 없음", 
+                                        전화번호: p.nationalPhoneNumber || "정보 없음" 
                                     },
                                     source: 'Google API'
                                 });
