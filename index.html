@@ -306,9 +306,9 @@
     <div class="card">
         <h3>1. 시스템 데이터 입출력</h3>
         <div class="btn-group">
-            <button class="success" onclick="importSystemDataFromFile()">DB에서 불러오기</button>
+            <button class="success" onclick="importSystemDataFromFile()">수동 DB 수신(파일 선택)</button>
         </div>
-        <div id="currentStatusText">상태: 대기 중...</div>
+        <div id="currentStatusText">상태: 초기화 및 자동 데이터 로드 준비 중...</div>
     </div>
 
     <!-- 2. 위치 및 공간 탐색 매개변수 설정 -->
@@ -408,12 +408,10 @@ let googleMap = null;
 let mapMarkers = [];
 let geocoder = null;
 
-// 국가_도시_POI, 국가_도시_POI_식당명에서 상위 구조를 무조건 지우고 맨 마지막 실제 장소명만 남기는 완벽 정제 함수
+// 정제 함수
 function extractCleanName(rawName) {
     if (!rawName) return "장소";
     let str = String(rawName).trim();
-    
-    // 언더바(_), 대시(-), 슬래시(/) 등 모든 분리문자를 분리하여 유효한 마지막 단어 추출
     let parts = str.split(/[_/\-]/).map(p => p.trim()).filter(p => p.length > 0);
     if (parts.length > 0) {
         return parts[parts.length - 1];
@@ -577,6 +575,68 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
+// 데이터 파싱 및 저장 로직
+function processAndSaveData(data) {
+    let countryData = data.CountryDB || data.country_table || {};
+    let cityData = data.CityDB || data.city_table || {};
+    let poiData = data.PoiDB || data.poi_table || {};
+    let restData = data.RestaurantDB || data.restaurant_table || {};
+    let hierarchyData = data.HierarchyMapDB || {};
+
+    if (Array.isArray(poiData)) {
+        let obj = {};
+        poiData.forEach(item => { 
+            let key = item["POI"] || item["이름"] || item["명칭"];
+            if (key) obj[key] = item; 
+        });
+        poiData = obj;
+    }
+    if (Array.isArray(restData)) {
+        let obj = {};
+        restData.forEach(item => { 
+            let key = item["식당명"] || item["이름"] || item["명칭"];
+            if (key) obj[key] = item; 
+        });
+        restData = obj;
+    }
+
+    localStorage.setItem('CountryDB', JSON.stringify(countryData));
+    localStorage.setItem('CityDB', JSON.stringify(cityData));
+    localStorage.setItem('PoiDB', JSON.stringify(poiData));
+    localStorage.setItem('RestaurantDB', JSON.stringify(restData));
+    localStorage.setItem('HierarchyMapDB', JSON.stringify(hierarchyData));
+
+    refreshDatabaseViews();
+    renderSpatialData();
+}
+
+// 시스템 개시 시 자동으로 DB JSON 파싱 시도
+async function autoLoadSystemData() {
+    try {
+        // 서버 환경에 기본 제공되는 JSON 데이터 파일 경로 (필요 시 파일명 수정)
+        const response = await fetch('./system_db.json');
+        if (response.ok) {
+            const data = await response.json();
+            processAndSaveData(data);
+            document.getElementById('currentStatusText').innerText = "상태: 시스템 DB 파일(system_db.json)이 성공적으로 자동 로드되었습니다.";
+            return;
+        }
+    } catch (e) {
+        console.log("자동 로드 실패, 로컬 브라우저 저장소 데이터 점검으로 전환합니다.");
+    }
+
+    // 파일 로드 실패 시 localStorage 재확인
+    const poiDB = JSON.parse(localStorage.getItem('PoiDB') || '{}');
+    const restDB = JSON.parse(localStorage.getItem('RestaurantDB') || '{}');
+
+    if (Object.keys(poiDB).length > 0 || Object.keys(restDB).length > 0) {
+        document.getElementById('currentStatusText').innerText = "상태: 기존 저장소 데이터를 불러왔습니다.";
+    } else {
+        document.getElementById('currentStatusText').innerText = "상태: DB 데이터가 없습니다. 상단 버튼으로 JSON 파일을 불러와 주세요.";
+    }
+}
+
+// 파일 선택을 통한 수동 업로드
 function importSystemDataFromFile() {
     const fileInput = document.createElement("input");
     fileInput.type = "file"; 
@@ -590,42 +650,9 @@ function importSystemDataFromFile() {
         reader.onload = (event) => {
             try {
                 const data = JSON.parse(event.target.result);
-                
-                let countryData = data.CountryDB || data.country_table || {};
-                let cityData = data.CityDB || data.city_table || {};
-                let poiData = data.PoiDB || data.poi_table || {};
-                let restData = data.RestaurantDB || data.restaurant_table || {};
-                let hierarchyData = data.HierarchyMapDB || {};
-
-                if (Array.isArray(poiData)) {
-                    let obj = {};
-                    poiData.forEach(item => { 
-                        let key = item["POI"] || item["이름"] || item["명칭"];
-                        if (key) obj[key] = item; 
-                    });
-                    poiData = obj;
-                }
-                if (Array.isArray(restData)) {
-                    let obj = {};
-                    restData.forEach(item => { 
-                        let key = item["식당명"] || item["이름"] || item["명칭"];
-                        if (key) obj[key] = item; 
-                    });
-                    restData = obj;
-                }
-
-                localStorage.setItem('CountryDB', JSON.stringify(countryData));
-                localStorage.setItem('CityDB', JSON.stringify(cityData));
-                localStorage.setItem('PoiDB', JSON.stringify(poiData));
-                localStorage.setItem('RestaurantDB', JSON.stringify(restData));
-                localStorage.setItem('HierarchyMapDB', JSON.stringify(hierarchyData));
-
-                refreshDatabaseViews();
-                renderSpatialData();
-
+                processAndSaveData(data);
                 document.getElementById('currentStatusText').innerText = "파일 데이터가 성공적으로 로드되었습니다.";
                 alert("파일을 성공적으로 불러왔습니다.");
-
             } catch (err) {
                 alert("JSON 파일 처리 중 오류가 발생했습니다.");
                 console.error(err);
@@ -751,18 +778,16 @@ function renderItemOnBoardAndList(item) {
     infoList.appendChild(card);
 }
 
-// 현위치/기준점부터 목적지까지 도보 길찾기 구글 맵 연결 함수
+// 개선된 도보 길찾기 구글 맵 연결 함수 (도로상 위치 매칭 오류 해결)
 function openWalkingDirections(event, destLat, destLng, destName, placeId) {
-    event.stopPropagation(); // 카드 클릭 이벤트(일반 장소 보기) 중복 실행 방지
+    event.stopPropagation(); // 카드 상위 클릭 방지
 
-    const startLat = parseFloat(document.getElementById('myLat').value);
-    const startLng = parseFloat(document.getElementById('myLng').value);
-
+    // 비도로상 위치 좌표 문제 해결: 특정 좌표 대신 구글 맵의 'My Location' 키워드를 활용해 구글 내부의 자동 도로 인덱싱 매칭
     let walkUrl = "";
     if (placeId) {
-        walkUrl = `https://www.google.com/maps/dir/?api=1&origin=${startLat},${startLng}&destination=${encodeURIComponent(destName)}&destination_place_id=${placeId}&travelmode=walking`;
+        walkUrl = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${encodeURIComponent(destName)}&destination_place_id=${placeId}&travelmode=walking`;
     } else {
-        walkUrl = `https://www.google.com/maps/dir/?api=1&origin=${startLat},${startLng}&destination=${destLat},${destLng}&travelmode=walking`;
+        walkUrl = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destLat},${destLng}&travelmode=walking`;
     }
 
     window.open(walkUrl, '_blank');
@@ -779,7 +804,7 @@ function openGoogleMapPage(name, lat, lng, placeId) {
     window.open(mapUrl, '_blank');
 }
 
-// 실시간 탐색 (정제된 깔끔한 이름만 다루도록 수정)
+// 실시간 탐색
 async function searchUnified(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -888,7 +913,6 @@ async function searchUnified(targetType) {
         let confirmText = `${radiusKm}Km 이내 조건에 부합하는 [${cleanTopName}] 외 ${matchedList.length}곳이 검색되었습니다.\n(가장 가까운 장소 출처: ${topItem.source})\n안내를 진행할까요?`;
         
         if (confirm(confirmText)) {
-            // 순수한 장소 이름만 읽어주도록 TTS 메시지 생성
             let speechMsg = `가장 가까운 장소는 ${cleanTopName} 이며, 거리는 ${topItem.dist.toFixed(1)}킬로미터, 평점은 ${topItem.data.Rating || topItem.data.평점}점 입니다.`;
             speakText(speechMsg);
 
@@ -963,18 +987,9 @@ function openTab(evt, tabId) {
     evt.currentTarget.classList.add("active");
 }
 
-// 페이지 최초 로드 시 실행 및 JSON 업로드 상태 점검
+// 최초 로드 시 실행
 window.onload = function() {
-    refreshDatabaseViews();
-
-    const poiDB = JSON.parse(localStorage.getItem('PoiDB') || '{}');
-    const restDB = JSON.parse(localStorage.getItem('RestaurantDB') || '{}');
-
-    // DB에 데이터가 비어있는지 확인
-    if (Object.keys(poiDB).length === 0 && Object.keys(restDB).length === 0) {
-        document.getElementById('currentStatusText').innerText = "경고: 로드된 시스템 데이터가 없습니다. JSON 파일을 업로드 해주세요.";
-        alert("시스템 데이터가 존재하지 않습니다.\n상단의 [DB에서 불러오기] 버튼을 눌러 JSON 파일을 먼저 업로드 해주세요.");
-    }
+    autoLoadSystemData();
 };
 </script>
 
