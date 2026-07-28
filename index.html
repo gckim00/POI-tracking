@@ -3,43 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hierarchical Word Document Builder Intelligence System</title>
+    <title>Location base POI & Restaurant Searching System</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
+            margin: 15px;
             background-color: #f4f6f9;
+            font-size: 11px; /* 전체 폰트 약 20% 축소 */
         }
         
         h1 {
             color: #333;
             text-align: center;
+            font-size: 20px;
+            margin-bottom: 15px;
         }
         
         .container {
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            max-width: 1200px;
+            gap: 15px;
+            max-width: 1000px;
             margin: 0 auto;
         }
         
         .card {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            font-size: 13px;
+            margin-top: 0;
+            margin-bottom: 10px;
         }
         
         .btn-group {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 8px;
+            margin-bottom: 10px;
             flex-wrap: wrap;
         }
         
         button {
-            padding: 10px 15px;
+            padding: 6px 12px;
+            font-size: 11px;
             font-weight: bold;
             border: none;
             border-radius: 4px;
@@ -69,32 +79,24 @@
             background-color: #5a6268;
         }
         
-        button.warning {
-            background-color: #ffc107;
-            color: #212529;
-        }
-        
-        button.warning:hover {
-            background-color: #e0a800;
-        }
-        
         #currentStatusText {
             font-weight: bold;
             color: #17a2b8;
-            margin-top: 10px;
+            margin-top: 8px;
+            font-size: 11px;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 8px;
         }
         
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 6px;
             text-align: left;
-            font-size: 13px;
+            font-size: 10px;
         }
         
         th {
@@ -103,16 +105,17 @@
         
         .tab-menu {
             display: flex;
-            gap: 5px;
+            gap: 4px;
             border-bottom: 2px solid #ccc;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         
         .tab-btn {
             background: #e9ecef;
             color: #495057;
             border: none;
-            padding: 10px 20px;
+            padding: 6px 14px;
+            font-size: 11px;
             cursor: pointer;
         }
         
@@ -130,99 +133,112 @@
             display: block;
         }
         
-        .input-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
+        /* 1열 배치용 입력 그리드 */
+        .input-row-single {
+            display: flex;
+            gap: 8px;
+            flex-wrap: nowrap;
+            margin-bottom: 10px;
         }
         
-        .input-group {
+        .input-group-narrow {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .input-group-narrow label {
+            font-weight: bold;
+            font-size: 10px;
+            color: #495057;
+            white-space: nowrap;
+        }
+        
+        .input-group-narrow input {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 11px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .input-row-second {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        /* 지도 표시 영역 및 Zoom 컨트롤 */
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            margin-top: 10px;
+            border: 1px solid #b0bec5;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        #spatialBoard {
+            width: 100%;
+            height: 100%;
+            background-color: #eef2f5;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
             display: flex;
             flex-direction: column;
             gap: 4px;
         }
-        
-        .input-group label {
-            font-weight: bold;
-            font-size: 12px;
-            color: #495057;
-        }
-        
-        .input-group input {
-            padding: 8px;
+
+        .zoom-btn {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            font-size: 16px;
+            line-height: 26px;
+            text-align: center;
+            background-color: #ffffff;
+            color: #333;
             border: 1px solid #ccc;
             border-radius: 4px;
-        }
-        
-        .display-board {
-            width: 100%;
-            height: 350px;
-            background-color: #eef2f5;
-            border: 2px dashed #b0bec5;
-            border-radius: 8px;
-            position: relative;
-            margin-top: 15px;
-            overflow: hidden;
-        }
-        
-        .marker {
-            position: absolute;
-            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             cursor: pointer;
-            text-align: center;
         }
-        
-        .marker-icon {
-            width: 20px;
-            height: 20px;
-            display: inline-block;
-            border-radius: 50%;
-        }
-        
-        .marker-my {
-            background-color: #dc3545;
-            border: 2px solid #fff;
-            box-shadow: 0 0 5px rgba(0,0,0,0.5);
-        }
-        
-        .marker-poi {
-            background-color: #007bff;
-            border: 2px solid #fff;
-            box-shadow: 0 0 5px rgba(0,0,0,0.5);
-        }
-        
-        .marker-rest {
-            background-color: #28a745;
-            border: 2px solid #fff;
-            box-shadow: 0 0 5px rgba(0,0,0,0.5);
-        }
-        
-        .marker-label {
-            font-size: 11px;
-            background: rgba(255,255,255,0.9);
-            padding: 2px 4px;
-            border-radius: 3px;
-            border: 1px solid #ccc;
-            white-space: nowrap;
-            margin-top: 2px;
+
+        .zoom-btn:hover {
+            background-color: #f0f0f0;
         }
         
         .info-card-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 8px;
+            margin-top: 12px;
         }
         
         .info-card {
             background: #fff;
-            border-left: 5px solid #007bff;
-            padding: 10px 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid #007bff;
+            padding: 8px 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .info-card:hover {
+            background-color: #f8f9fa;
         }
         
         .info-card.rest {
@@ -230,11 +246,12 @@
         }
 
         .badge-source {
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 12px;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
             font-weight: bold;
             color: #fff;
+            white-space: nowrap;
         }
         .badge-db { background-color: #17a2b8; }
         .badge-api { background-color: #fd7e14; }
@@ -243,7 +260,7 @@
 <body>
 
 <div class="container">
-    <h1>Hierarchical Word Document Builder Intelligence System</h1>
+    <h1>Location base POI & Restaurant Searching System</h1>
 
     <!-- 1. 제어 및 데이터 파일 입출력 -->
     <div class="card">
@@ -258,49 +275,56 @@
     <!-- 2. 위치 및 탐색 매개변수 설정 -->
     <div class="card">
         <h3>2. 위치 및 공간 탐색 매개변수 설정</h3>
-        <div class="input-grid">
-            <div class="input-group">
-                <label for="myLat">위도 (Lat):</label>
-                <input type="number" id="myLat" step="0.0001" value="37.4292">
+        
+        <!-- 1열 서치 조건 조율 박스 -->
+        <div class="input-row-single">
+            <div class="input-group-narrow">
+                <label for="myLat">위도(Lat)</label>
+                <input type="number" id="myLat" step="0.0001" value="37.5665">
             </div>
-            <div class="input-group">
-                <label for="myLng">경도 (Lng):</label>
-                <input type="number" id="myLng" step="0.0001" value="127.0182">
+            <div class="input-group-narrow">
+                <label for="myLng">경도(Lng)</label>
+                <input type="number" id="myLng" step="0.0001" value="126.9780">
             </div>
-            <div class="input-group">
-                <label for="mapRadius">기본 도식화 반경 (Km):</label>
+            <div class="input-group-narrow">
+                <label for="mapRadius">기본반경(Km)</label>
                 <input type="number" id="mapRadius" value="50">
             </div>
-            <div class="input-group">
-                <label for="searchRadius">실시간 탐색 반경 (Km):</label>
+            <div class="input-group-narrow">
+                <label for="searchRadius">실시간반경(Km)</label>
                 <input type="number" id="searchRadius" value="20">
             </div>
-            <div class="input-group">
-                <label for="poiMinRating">POI 최소 평점:</label>
+            <div class="input-group-narrow">
+                <label for="poiMinRating">POI 최소평점</label>
                 <input type="number" id="poiMinRating" step="0.1" value="4.5">
             </div>
-            <div class="input-group">
-                <label for="restMinRating">식당 최소 평점:</label>
+            <div class="input-group-narrow">
+                <label for="restMinRating">식당 최소평점</label>
                 <input type="number" id="restMinRating" step="0.1" value="4.7">
             </div>
-            <div class="input-group" style="grid-column: span 2;">
-                <label for="apiKey">Google Places API Key (선택):</label>
-                <input type="password" id="apiKey" placeholder="API Key 입력 후 포커스 이동 시 SDK 자동 로드" onchange="loadGoogleMapsSdkNew()">
+        </div>
+
+        <!-- 2열 API Key 입력 박스 -->
+        <div class="input-row-second">
+            <div class="input-group-narrow" style="width: 100%;">
+                <label for="apiKey">Google Places API Key (선택)</label>
+                <input type="password" id="apiKey" placeholder="API Key 입력 시 구글 실시간 서치 수행" onchange="loadGoogleMapsSdkNew()">
             </div>
         </div>
 
         <div class="btn-group">
             <button onclick="renderSpatialData()">설정 반경 시각화</button>
-            <button class="warning" onclick="showDbItemsWithin('POI')">DB 내 POI 탐색</button>
-            <button class="warning" onclick="showDbItemsWithin('Restaurant')">DB 내 식당 탐색</button>
-            <button onclick="searchRealtime('POI')">실시간 POI 탐색 (가까운 순 정렬)</button>
-            <button onclick="searchRealtime('Restaurant')">실시간 식당 탐색 (가까운 순 정렬)</button>
+            <button onclick="searchUnified('POI')">실시간 POI 탐색</button>
+            <button onclick="searchUnified('Restaurant')">실시간 식당 탐색</button>
         </div>
 
-        <div class="display-board" id="spatialBoard">
-            <div style="text-align: center; padding-top: 160px; color: #888;">
-                위치 및 공간 데이터 도식화 영역
+        <!-- 인터랙티브 구글 지도 영역 및 확대/축소 버튼 -->
+        <div class="map-wrapper">
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoomMap(1)" title="Zoom In">+</button>
+                <button class="zoom-btn" onclick="zoomMap(-1)" title="Zoom Out">-</button>
             </div>
+            <div id="spatialBoard"></div>
         </div>
 
         <div class="info-card-list" id="infoCardList"></div>
@@ -338,8 +362,10 @@
 <script>
 let isSdkLoaded = false;
 let PlaceClass = null;
+let googleMap = null;
+let mapMarkers = [];
 
-// 최신 Google Maps Places API (New) 동적 로더
+// Google Maps SDK 동적 로더
 async function loadGoogleMapsSdkNew() {
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) return;
@@ -370,13 +396,40 @@ async function loadGoogleMapsSdkNew() {
         }
 
         const placesLib = await google.maps.importLibrary("places");
+        await google.maps.importLibrary("maps");
         PlaceClass = placesLib.Place;
         isSdkLoaded = true;
-        document.getElementById('currentStatusText').innerText = "Google Places API (New) 연동 완료";
+        initGoogleMap();
+        document.getElementById('currentStatusText').innerText = "Google Places API (New) 및 Google Maps 연동 완료";
     } catch (err) {
         console.error("Google Maps SDK 로딩 실패", err);
         document.getElementById('currentStatusText').innerText = "API 키 검증 및 SDK 로딩 실패";
-        alert("Google Maps SDK를 로드하지 못했습니다. API 키 및 연동 권한을 확인해주세요.");
+    }
+}
+
+// 구글 지도 객체 초기화
+function initGoogleMap() {
+    const myLat = parseFloat(document.getElementById('myLat').value);
+    const myLng = parseFloat(document.getElementById('myLng').value);
+    const mapElement = document.getElementById('spatialBoard');
+
+    if (window.google && window.google.maps) {
+        googleMap = new google.maps.Map(mapElement, {
+            center: { lat: myLat, lng: myLng },
+            zoom: 11,
+            disableDefaultUI: false,
+            zoomControl: false
+        });
+    }
+}
+
+// 지도 Zoom In / Out 제어
+function zoomMap(delta) {
+    if (googleMap) {
+        let currentZoom = googleMap.getZoom();
+        googleMap.setZoom(currentZoom + delta);
+    } else {
+        alert("지도가 로드되지 않았습니다. API Key를 설정해 주세요.");
     }
 }
 
@@ -392,7 +445,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
-// 1. JSON 불러오기
+// JSON 불러오기
 function importSystemDataFromFile() {
     const fileInput = document.createElement("input");
     fileInput.type = "file"; 
@@ -413,16 +466,6 @@ function importSystemDataFromFile() {
                 let restData = data.RestaurantDB || data.restaurant_table || {};
                 let hierarchyData = data.HierarchyMapDB || {};
 
-                if (Array.isArray(countryData)) {
-                    let obj = {};
-                    countryData.forEach(item => { if (item["국가명"]) obj[item["국가명"]] = item; });
-                    countryData = obj;
-                }
-                if (Array.isArray(cityData)) {
-                    let obj = {};
-                    cityData.forEach(item => { if (item["국가명"] && item["도시명"]) obj[`${item["국가명"]}_${item["도시명"]}`] = item; });
-                    cityData = obj;
-                }
                 if (Array.isArray(poiData)) {
                     let obj = {};
                     poiData.forEach(item => { 
@@ -462,7 +505,7 @@ function importSystemDataFromFile() {
     fileInput.click();
 }
 
-// 2. JSON 내보내기
+// JSON 내보내기
 function exportSystemDataToFile() {
     try {
         const countryDB = JSON.parse(localStorage.getItem('CountryDB') || '{}');
@@ -501,23 +544,34 @@ function exportSystemDataToFile() {
     }
 }
 
-// 3. 반경 내 시각화
+// 기존 마커 초기화
+function clearMapMarkers() {
+    mapMarkers.forEach(m => m.setMap(null));
+    mapMarkers = [];
+}
+
+// 반경 내 시각화
 function renderSpatialData() {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
     const maxRadiusKm = parseFloat(document.getElementById('mapRadius').value);
 
-    const board = document.getElementById('spatialBoard');
     const infoList = document.getElementById('infoCardList');
-    board.innerHTML = "";
     infoList.innerHTML = "";
+    clearMapMarkers();
 
-    const myMarker = document.createElement('div');
-    myMarker.className = 'marker';
-    myMarker.style.left = '50%';
-    myMarker.style.top = '50%';
-    myMarker.innerHTML = `<div class="marker-icon marker-my"></div><div class="marker-label">내 위치</div>`;
-    board.appendChild(myMarker);
+    if (googleMap) {
+        googleMap.setCenter({ lat: myLat, lng: myLng });
+        
+        // 내 위치 마커
+        let myMarker = new google.maps.Marker({
+            position: { lat: myLat, lng: myLng },
+            map: googleMap,
+            title: "내 위치",
+            icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+        });
+        mapMarkers.push(myMarker);
+    }
 
     const poiDB = JSON.parse(localStorage.getItem('PoiDB') || '{}');
     const restDB = JSON.parse(localStorage.getItem('RestaurantDB') || '{}');
@@ -531,7 +585,7 @@ function renderSpatialData() {
         if (lat && lng) {
             let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
             if (dist <= maxRadiusKm) {
-                allItems.push({ type: 'POI', name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB' });
+                allItems.push({ type: 'POI', name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내' });
             }
         }
     });
@@ -543,104 +597,78 @@ function renderSpatialData() {
         if (lat && lng) {
             let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
             if (dist <= maxRadiusKm) {
-                allItems.push({ type: 'Restaurant', name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB' });
+                allItems.push({ type: 'Restaurant', name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB내' });
             }
         }
     });
 
     allItems.sort((a, b) => a.dist - b.dist);
-
-    allItems.forEach(item => {
-        renderItemOnBoardAndList(item, myLat, myLng);
-    });
+    allItems.forEach(item => renderItemOnBoardAndList(item));
 }
 
-function renderItemOnBoardAndList(item, myLat, myLng) {
-    const board = document.getElementById('spatialBoard');
+// 개별 카드 생성 및 지도 마커 등록
+function renderItemOnBoardAndList(item) {
     const infoList = document.getElementById('infoCardList');
 
-    let dLat = item.lat - myLat;
-    let dLng = item.lng - myLng;
+    if (googleMap) {
+        let iconUrl = item.type === 'POI' 
+            ? "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" 
+            : "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
 
-    let posX = Math.max(5, Math.min(95, 50 + (dLng * 150)));
-    let posY = Math.max(5, Math.min(95, 50 - (dLat * 150)));
+        let marker = new google.maps.Marker({
+            position: { lat: item.lat, lng: item.lng },
+            map: googleMap,
+            title: item.name,
+            icon: iconUrl
+        });
 
-    const marker = document.createElement('div');
-    marker.className = 'marker';
-    marker.style.left = posX + '%';
-    marker.style.top = posY + '%';
+        // 마커 클릭 시 구글 지도로 이동
+        marker.addListener('click', () => {
+            openGoogleMapPage(item.name, item.lat, item.lng);
+        });
 
-    let iconClass = item.type === 'POI' ? 'marker-poi' : 'marker-rest';
-    marker.innerHTML = `<div class="marker-icon ${iconClass}"></div><div class="marker-label">${item.name} (${item.dist.toFixed(1)}km)</div>`;
-    board.appendChild(marker);
+        mapMarkers.push(marker);
+    }
 
     let rating = item.data.Rating || item.data.평점 || "정보 없음";
     let hours = item.data.영업시간 || item.data.hours || "정보 없음";
     let web = item.data.홈페이지 || item.data.website || "정보 없음";
     let phone = item.data.전화번호 || item.data.phone || "정보 없음";
+    let address = item.data.주소 || item.data.address || "정보 없음";
 
     const card = document.createElement('div');
     card.className = `info-card ${item.type === 'Restaurant' ? 'rest' : ''}`;
     
-    let badgeClass = item.source === 'DB' ? 'badge-db' : 'badge-api';
-    let sourceText = item.source === 'DB' ? 'DB 검색' : 'API 실시간';
+    let badgeClass = item.source === 'DB내' ? 'badge-db' : 'badge-api';
 
     card.innerHTML = `
         <div>
-            <strong>[${item.type}] ${item.name}</strong> - 거리: ${item.dist.toFixed(2)} Km<br>
+            <strong>[${item.name}]</strong> - 거리: ${item.dist.toFixed(2)} Km<br>
             평점: ${rating} | 영업시간: ${hours}<br>
+            주소: ${address}<br>
             홈페이지: ${web} | 전화번호: ${phone}
         </div>
         <div>
-            <span class="badge-source ${badgeClass}">${sourceText}</span>
+            <span class="badge-source ${badgeClass}">${item.source}</span>
         </div>
     `;
+
+    // 서치된 결과 클릭 시 구글 지도로 이동
+    card.onclick = () => {
+        openGoogleMapPage(item.name, item.lat, item.lng);
+    };
+
     infoList.appendChild(card);
 }
 
-// 4. DB 내 검색
-function showDbItemsWithin(targetType) {
-    const myLat = parseFloat(document.getElementById('myLat').value);
-    const myLng = parseFloat(document.getElementById('myLng').value);
-    const radiusKm = parseFloat(document.getElementById('searchRadius').value);
-
-    const board = document.getElementById('spatialBoard');
-    const infoList = document.getElementById('infoCardList');
-    board.innerHTML = "";
-    infoList.innerHTML = "";
-
-    const myMarker = document.createElement('div');
-    myMarker.className = 'marker';
-    myMarker.style.left = '50%';
-    myMarker.style.top = '50%';
-    myMarker.innerHTML = `<div class="marker-icon marker-my"></div><div class="marker-label">내 위치</div>`;
-    board.appendChild(myMarker);
-
-    const dbKey = targetType === 'POI' ? 'PoiDB' : 'RestaurantDB';
-    const dbData = JSON.parse(localStorage.getItem(dbKey) || '{}');
-
-    let matchedList = [];
-
-    Object.keys(dbData).forEach(k => {
-        let item = dbData[k];
-        let lat = item.lat || item.latitude || item.위도;
-        let lng = item.lng || item.longitude || item.경도;
-        if (lat && lng) {
-            let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
-            if (dist <= radiusKm) {
-                matchedList.push({ type: targetType, name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB' });
-            }
-        }
-    });
-
-    matchedList.sort((a, b) => a.dist - b.dist);
-    matchedList.forEach(item => renderItemOnBoardAndList(item, myLat, myLng));
-
-    document.getElementById('currentStatusText').innerText = `${radiusKm}Km 이내 DB 내 ${targetType} ${matchedList.length}개를 정렬했습니다.`;
+// 구글 지도 상세 연결 이동 함수
+function openGoogleMapPage(name, lat, lng) {
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=&center=${lat},${lng}`;
+    window.open(mapUrl, '_blank');
 }
 
-// 5. 실시간 검색 (표준 필드 규격 적용)
-async function searchRealtime(targetType) {
+// 통합 실시간 탐색 (DB 선조회 -> 없거나 필요 시 실시간 API 탐색)
+async function searchUnified(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
     const radiusKm = parseFloat(document.getElementById('searchRadius').value);
@@ -648,14 +676,14 @@ async function searchRealtime(targetType) {
         ? parseFloat(document.getElementById('poiMinRating').value)
         : parseFloat(document.getElementById('restMinRating').value);
 
-    document.getElementById('currentStatusText').innerText = `실시간 ${targetType} 검색 수행 중...`;
+    document.getElementById('currentStatusText').innerText = `실시간 ${targetType} 탐색 수행 중...`;
 
     const dbKey = targetType === 'POI' ? 'PoiDB' : 'RestaurantDB';
     const dbData = JSON.parse(localStorage.getItem(dbKey) || '{}');
 
     let matchedList = [];
 
-    // 1단계: DB 내 탐색
+    // 1단계: DB 내 먼저 탐색
     Object.keys(dbData).forEach(k => {
         let item = dbData[k];
         let lat = item.lat || item.latitude || item.위도;
@@ -665,12 +693,20 @@ async function searchRealtime(targetType) {
         if (lat && lng) {
             let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
             if (dist <= radiusKm && rating >= minRating) {
-                matchedList.push({ type: targetType, name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB' });
+                matchedList.push({ 
+                    type: targetType, 
+                    name: k, 
+                    dist: dist, 
+                    lat: parseFloat(lat), 
+                    lng: parseFloat(lng), 
+                    data: item, 
+                    source: 'DB내' 
+                });
             }
         }
     });
 
-    // 2단계: Places API (New) 실시간 검색
+    // 2단계: DB 결과 없거나 API Key 입력 시 실시간 구글 API 탐색 진행
     const apiKey = document.getElementById('apiKey').value.trim();
     if (apiKey) {
         if (!isSdkLoaded) {
@@ -679,9 +715,9 @@ async function searchRealtime(targetType) {
 
         if (PlaceClass) {
             try {
-                // 표준 호환 필드셋만 안전하게 요청
+                // 주소, 홈페이지, 전화번호, 영업시간 필드 추가 명시
                 const request = {
-                    fields: ["displayName", "location", "rating"],
+                    fields: ["displayName", "location", "rating", "formattedAddress", "websiteURI", "nationalPhoneNumber", "regularOpeningHours"],
                     locationRestriction: {
                         center: { lat: myLat, lng: myLng },
                         radius: radiusKm * 1000
@@ -698,7 +734,11 @@ async function searchRealtime(targetType) {
                             let lat = typeof p.location.lat === 'function' ? p.location.lat() : p.location.lat;
                             let lng = typeof p.location.lng === 'function' ? p.location.lng() : p.location.lng;
                             let dist = calculateDistance(myLat, myLng, lat, lng);
-                            if (dist <= radiusKm) {
+                            
+                            // DB 데이터 중복 제외 후 실시간 추가
+                            let existsInDb = matchedList.some(item => item.name === p.displayName);
+                            if (dist <= radiusKm && !existsInDb) {
+                                let isOpen = p.regularOpeningHours ? (p.regularOpeningHours.openNow ? "영업 중" : "영업 종료") : "정보 없음";
                                 matchedList.push({
                                     type: targetType,
                                     name: p.displayName || "실시간 장소",
@@ -707,11 +747,12 @@ async function searchRealtime(targetType) {
                                     lng: lng,
                                     data: { 
                                         Rating: pRating, 
-                                        영업시간: "API 실시간 조회", 
-                                        홈페이지: "API 실시간 조회", 
-                                        전화번호: "API 실시간 조회" 
+                                        영업시간: isOpen,
+                                        주소: p.formattedAddress || "정보 없음",
+                                        홈페이지: p.websiteURI || "정보 없음", 
+                                        전화번호: p.nationalPhoneNumber || "정보 없음" 
                                     },
-                                    source: 'Google API'
+                                    source: '실시간'
                                 });
                             }
                         }
@@ -719,7 +760,6 @@ async function searchRealtime(targetType) {
                 }
             } catch (err) {
                 console.error("New Places API 검색 실패:", err);
-                alert("Google Places API 호출 실패: " + err.message);
             }
         }
     }
@@ -728,27 +768,30 @@ async function searchRealtime(targetType) {
 
     if (matchedList.length > 0) {
         const topItem = matchedList[0];
-        let confirmText = `${radiusKm}Km 이내에 평점 ${minRating} 이상인 [${topItem.name}] 외 ${matchedList.length}곳이 검색되었습니다.\n(가장 가까운 장소 출처: ${topItem.source})\n안내를 진행할까요?`;
+        let confirmText = `${radiusKm}Km 이내 조건에 부합하는 [${topItem.name}] 외 ${matchedList.length}곳이 검색되었습니다.\n(가장 가까운 장소 출처: ${topItem.source})\n안내를 진행할까요?`;
         
         if (confirm(confirmText)) {
             let speechMsg = `가장 가까운 장소는 ${topItem.name} 이며, 거리는 ${topItem.dist.toFixed(1)}킬로미터, 평점은 ${topItem.data.Rating || topItem.data.평점}점 입니다.`;
             speakText(speechMsg);
 
-            const board = document.getElementById('spatialBoard');
             const infoList = document.getElementById('infoCardList');
-            board.innerHTML = "";
             infoList.innerHTML = "";
+            clearMapMarkers();
 
-            const myMarker = document.createElement('div');
-            myMarker.className = 'marker';
-            myMarker.style.left = '50%';
-            myMarker.style.top = '50%';
-            myMarker.innerHTML = `<div class="marker-icon marker-my"></div><div class="marker-label">내 위치</div>`;
-            board.appendChild(myMarker);
+            if (googleMap) {
+                googleMap.setCenter({ lat: myLat, lng: myLng });
+                let myMarker = new google.maps.Marker({
+                    position: { lat: myLat, lng: myLng },
+                    map: googleMap,
+                    title: "내 위치",
+                    icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+                });
+                mapMarkers.push(myMarker);
+            }
 
-            matchedList.forEach(item => renderItemOnBoardAndList(item, myLat, myLng));
+            matchedList.forEach(item => renderItemOnBoardAndList(item));
         }
-        document.getElementById('currentStatusText').innerText = `총 ${matchedList.length}개의 ${targetType} 항목을 거리순으로 정렬했습니다.`;
+        document.getElementById('currentStatusText').innerText = `총 ${matchedList.length}개의 ${targetType} 항목을 거리가 가까운 순서로 정렬했습니다.`;
     } else {
         alert(`${radiusKm}Km 이내 조건(평점 ${minRating} 이상)에 부합하는 장소가 없습니다.`);
         document.getElementById('currentStatusText').innerText = "검색 결과가 없습니다.";
@@ -804,7 +847,6 @@ function openTab(evt, tabId) {
 
 window.onload = function() {
     refreshDatabaseViews();
-    renderSpatialData();
 };
 </script>
 
