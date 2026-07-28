@@ -639,7 +639,7 @@ function showDbItemsWithin(targetType) {
     document.getElementById('currentStatusText').innerText = `${radiusKm}Km 이내 DB 내 ${targetType} ${matchedList.length}개를 정렬했습니다.`;
 }
 
-// 5. 실시간 검색 (Places API New 수정 반영)
+// 5. 실시간 검색 (표준 필드 규격 적용)
 async function searchRealtime(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -679,9 +679,9 @@ async function searchRealtime(targetType) {
 
         if (PlaceClass) {
             try {
-                // websiteURI 및 nationalPhoneNumber 대문자 규격 반영
+                // 표준 호환 필드셋만 안전하게 요청
                 const request = {
-                    fields: ["displayName", "location", "rating", "websiteURI", "nationalPhoneNumber"],
+                    fields: ["displayName", "location", "rating"],
                     locationRestriction: {
                         center: { lat: myLat, lng: myLng },
                         radius: radiusKm * 1000
@@ -695,8 +695,8 @@ async function searchRealtime(targetType) {
                     places.forEach(p => {
                         let pRating = p.rating || 0;
                         if (pRating >= minRating && p.location) {
-                            let lat = p.location.lat();
-                            let lng = p.location.lng();
+                            let lat = typeof p.location.lat === 'function' ? p.location.lat() : p.location.lat;
+                            let lng = typeof p.location.lng === 'function' ? p.location.lng() : p.location.lng;
                             let dist = calculateDistance(myLat, myLng, lat, lng);
                             if (dist <= radiusKm) {
                                 matchedList.push({
@@ -708,8 +708,8 @@ async function searchRealtime(targetType) {
                                     data: { 
                                         Rating: pRating, 
                                         영업시간: "API 실시간 조회", 
-                                        홈페이지: p.websiteURI || "정보 없음", 
-                                        전화번호: p.nationalPhoneNumber || "정보 없음" 
+                                        홈페이지: "API 실시간 조회", 
+                                        전화번호: "API 실시간 조회" 
                                     },
                                     source: 'Google API'
                                 });
@@ -719,6 +719,7 @@ async function searchRealtime(targetType) {
                 }
             } catch (err) {
                 console.error("New Places API 검색 실패:", err);
+                alert("Google Places API 호출 실패: " + err.message);
             }
         }
     }
