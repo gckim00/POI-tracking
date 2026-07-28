@@ -94,7 +94,7 @@
         
         #currentStatusText {
             font-weight: bold;
-            color: #17a2b8;
+            color: #dc3545;
             margin-top: 10px;
             font-size: 14.3px;
         }
@@ -308,7 +308,7 @@
         <div class="btn-group">
             <button class="success" onclick="importSystemDataFromFile()">수동 DB 수신(파일 선택)</button>
         </div>
-        <div id="currentStatusText">상태: 초기화 준비 중...</div>
+        <div id="currentStatusText">상태: JSON DB 파일을 불러와 주십시오.</div>
     </div>
 
     <!-- 2. 위치 및 공간 탐색 매개변수 설정 -->
@@ -402,14 +402,6 @@
 </div>
 
 <script>
-window.DEFAULT_SYSTEM_DATA = window.DEFAULT_SYSTEM_DATA || {
-    "CountryDB": {},
-    "CityDB": {},
-    "PoiDB": {},
-    "RestaurantDB": {},
-    "HierarchyMapDB": {}
-};
-
 let isSdkLoaded = false;
 let PlaceClass = null;
 let googleMap = null;
@@ -417,7 +409,6 @@ let mapMarkers = [];
 let geocoder = null;
 let currentAddressName = ""; 
 
-// DB Key나 장소명에서 계층구조 표기를 떼어내고 순수 장소명과 도시명을 분리하는 보정 함수
 function parseLocationNameInfo(rawName) {
     if (!rawName) return { cleanName: "장소", cityName: "" };
     let str = String(rawName).trim();
@@ -471,7 +462,11 @@ async function loadGoogleMapsSdkNew() {
         initGoogleMap();
         initAutocomplete();
         fetchCurrentLocationAddress();
-        document.getElementById('currentStatusText').innerText = "상태: Google Maps 연동 완료";
+        
+        const statusElem = document.getElementById('currentStatusText');
+        if (statusElem.innerText.includes("Google Maps")) {
+            statusElem.innerText = "상태: Google Maps 연동 완료";
+        }
     } catch (err) {
         console.error("Google Maps SDK 로딩 실패", err);
     }
@@ -495,6 +490,7 @@ function initAutocomplete() {
 function getCurrentGPSLocation() {
     if (navigator.geolocation) {
         document.getElementById('currentStatusText').innerText = "현재 위치(GPS) 정보 조회 중...";
+        document.getElementById('currentStatusText').style.color = "#17a2b8";
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const lat = position.coords.latitude;
@@ -543,7 +539,9 @@ function updateSearchLocation(lat, lng, label) {
 
     fetchCurrentLocationAddress();
     renderSpatialData();
-    document.getElementById('currentStatusText').innerText = `'${extractCleanName(label)}' 기준점이 설정되었습니다.`;
+    const statusElem = document.getElementById('currentStatusText');
+    statusElem.innerText = `'${extractCleanName(label)}' 기준점이 설정되었습니다.`;
+    statusElem.style.color = "#17a2b8";
 }
 
 function fetchCurrentLocationAddress() {
@@ -626,28 +624,6 @@ function processAndSaveData(data) {
     renderSpatialData();
 }
 
-function autoInitDatabase() {
-    let loaded = false;
-    const localPoi = JSON.parse(localStorage.getItem('PoiDB') || '{}');
-    if (Object.keys(localPoi).length > 0) {
-        loaded = true;
-    } 
-    
-    if (!loaded && window.DEFAULT_SYSTEM_DATA) {
-        processAndSaveData(window.DEFAULT_SYSTEM_DATA);
-        loaded = true;
-    }
-
-    refreshDatabaseViews();
-    renderSpatialData();
-
-    if (loaded) {
-        document.getElementById('currentStatusText').innerText = "상태: 시스템 시작 시 DB가 자동으로 로드되었습니다.";
-    } else {
-        document.getElementById('currentStatusText').innerText = "상태: DB 데이터가 비어있습니다. 수동 DB 수신 버튼을 이용해주세요.";
-    }
-}
-
 function importSystemDataFromFile() {
     const fileInput = document.createElement("input");
     fileInput.type = "file"; 
@@ -662,8 +638,12 @@ function importSystemDataFromFile() {
             try {
                 const data = JSON.parse(event.target.result);
                 processAndSaveData(data);
-                document.getElementById('currentStatusText').innerText = "파일 데이터가 성공적으로 수신되었습니다.";
-                alert("파일을 성공적으로 불러왔습니다.");
+                
+                const statusElem = document.getElementById('currentStatusText');
+                statusElem.innerText = "상태: 시스템 DB 파일이 성공적으로 수신되었습니다.";
+                statusElem.style.color = "#28a745";
+                
+                alert("JSON 파일을 성공적으로 불러왔습니다.");
             } catch (err) {
                 alert("JSON 파일 처리 중 오류가 발생했습니다.");
             }
@@ -786,14 +766,12 @@ function renderItemOnBoardAndList(item) {
     infoList.appendChild(card);
 }
 
-// [핵심 해결] DB 좌표 오류를 완벽히 우회하여 구글 지도의 도보 탐색을 100% 활성화시키는 길찾기 함수
 function openWalkingDirections(event, destLat, destLng, destName, cityName, destAddress, placeId) {
     event.stopPropagation();
 
     const startLat = parseFloat(document.getElementById('myLat').value);
     const startLng = parseFloat(document.getElementById('myLng').value);
 
-    // 한국 내부 판별 (한국은 구글 맵 도보 정책 제한이 있으므로 카카오맵으로 자동 우회)
     const isInsideKorea = (lat, lng) => (lat >= 33 && lat <= 39 && lng >= 124 && lng <= 132);
 
     if (isInsideKorea(startLat, startLng) || isInsideKorea(destLat, destLng)) {
@@ -802,22 +780,16 @@ function openWalkingDirections(event, destLat, destLng, destName, cityName, dest
         return;
     }
 
-    // 1. 출발지 파라미터 (역지오코딩된 주소가 있으면 주소로, 없으면 위경도 좌표로 전송)
     let originParam = currentAddressName ? encodeURIComponent(currentAddressName) : `${startLat},${startLng}`;
 
-    // 2. [가장 중요] DB 좌표 오차 문제 해결:
-    // 구글 지도로 단순 pure 좌표만 넘기면 도보 모드가 차단됩니다.
-    // 검색 쿼리에 [목적지 이름 + 도시명 + 도로명주소]를 조합해 텍스트로 전달하여 구글 엔진이 보행자 진입로로 자동 매칭하도록 설정합니다.
     let searchTarget = destName;
     if (cityName) searchTarget += ` ${cityName}`;
     if (destAddress && destAddress !== "정보 없음") searchTarget += ` ${destAddress}`;
 
     let destParam = encodeURIComponent(searchTarget);
 
-    // 3. 구글 지도 표준 길찾기 URL 생성
     let walkUrl = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destParam}&travelmode=walking`;
     
-    // placeId가 존재하는 경우 구글 내부 고유 장소 객체와 직접 바인딩
     if (placeId && placeId !== 'null' && placeId !== 'undefined' && placeId !== '') {
         walkUrl += `&destination_place_id=${placeId}`;
     }
@@ -843,7 +815,9 @@ async function searchUnified(targetType) {
         ? parseFloat(document.getElementById('poiMinRating').value)
         : parseFloat(document.getElementById('restMinRating').value);
 
-    document.getElementById('currentStatusText').innerText = `실시간 ${targetType} 탐색 수행 중...`;
+    const statusElem = document.getElementById('currentStatusText');
+    statusElem.innerText = `실시간 ${targetType} 탐색 수행 중...`;
+    statusElem.style.color = "#17a2b8";
 
     const dbKey = targetType === 'POI' ? 'PoiDB' : 'RestaurantDB';
     const dbData = JSON.parse(localStorage.getItem(dbKey) || '{}');
@@ -960,7 +934,7 @@ async function searchUnified(targetType) {
 
             matchedList.forEach(item => renderItemOnBoardAndList(item));
         }
-        document.getElementById('currentStatusText').innerText = `총 ${matchedList.length}개의 ${targetType} 항목을 거리 순으로 정렬했습니다.`;
+        statusElem.innerText = `총 ${matchedList.length}개의 ${targetType} 항목을 거리 순으로 정렬했습니다.`;
     } else {
         alert(`${radiusKm}Km 이내 조건에 부합하는 장소가 없습니다.`);
     }
@@ -1013,8 +987,16 @@ function openTab(evt, tabId) {
     evt.currentTarget.classList.add("active");
 }
 
+// [요청 사항 반영] 시스템 시작 시 안내 팝업 메시지 출력 및 상태 텍스트 설정
 window.onload = function() {
-    autoInitDatabase();
+    refreshDatabaseViews();
+    renderSpatialData();
+
+    const statusElem = document.getElementById('currentStatusText');
+    statusElem.innerText = "상태: 시스템 데이터가 필요합니다. [수동 DB 수신] 버튼을 눌러 JSON 파일을 로드해 주세요.";
+    statusElem.style.color = "#dc3545";
+
+    alert("시스템을 시작합니다.\n상단의 [수동 DB 수신(파일 선택)] 버튼을 눌러 JSON 데이터를 불러와 주세요.");
 };
 </script>
 
