@@ -308,7 +308,7 @@
         <div class="btn-group">
             <button class="success" onclick="importSystemDataFromFile()">수동 DB 수신(파일 선택)</button>
         </div>
-        <div id="currentStatusText">상태: 초기화 및 자동 데이터 로드 준비 중...</div>
+        <div id="currentStatusText">상태: 초기화 준비 중...</div>
     </div>
 
     <!-- 2. 위치 및 공간 탐색 매개변수 설정 -->
@@ -402,13 +402,21 @@
 </div>
 
 <script>
+window.DEFAULT_SYSTEM_DATA = window.DEFAULT_SYSTEM_DATA || {
+    "CountryDB": {},
+    "CityDB": {},
+    "PoiDB": {},
+    "RestaurantDB": {},
+    "HierarchyMapDB": {}
+};
+
 let isSdkLoaded = false;
 let PlaceClass = null;
 let googleMap = null;
 let mapMarkers = [];
 let geocoder = null;
+let currentAddressName = ""; 
 
-// 정제 함수
 function extractCleanName(rawName) {
     if (!rawName) return "장소";
     let str = String(rawName).trim();
@@ -423,11 +431,6 @@ function extractCleanName(rawName) {
 async function loadGoogleMapsSdkNew() {
     const apiKey = document.getElementById('apiKey').value.trim();
     if (!apiKey) return;
-
-    if (window.location.protocol === 'file:') {
-        alert("file:// 환경에서는 보안 차단으로 API 연동이 제한됩니다. GitHub Pages 또는 로컬서버(http://) 환경을 이용해주세요.");
-        return;
-    }
 
     try {
         if (!window.google || !window.google.maps) {
@@ -456,14 +459,14 @@ async function loadGoogleMapsSdkNew() {
         isSdkLoaded = true;
         initGoogleMap();
         initAutocomplete();
-        document.getElementById('currentStatusText').innerText = "Google Places API (New) 및 Google Maps 연동 완료 (한국어 적용)";
+        
+        fetchCurrentLocationAddress();
+        document.getElementById('currentStatusText').innerText = "상태: Google Maps 연동 완료 (한국어 적용)";
     } catch (err) {
         console.error("Google Maps SDK 로딩 실패", err);
-        document.getElementById('currentStatusText').innerText = "API 키 검증 및 SDK 로딩 실패";
     }
 }
 
-// 자동완성
 function initAutocomplete() {
     const input = document.getElementById('locationSearchInput');
     if (window.google && window.google.maps && window.google.maps.places) {
@@ -479,7 +482,6 @@ function initAutocomplete() {
     }
 }
 
-// GPS 위치
 function getCurrentGPSLocation() {
     if (navigator.geolocation) {
         document.getElementById('currentStatusText').innerText = "현재 위치(GPS) 정보 조회 중...";
@@ -488,19 +490,16 @@ function getCurrentGPSLocation() {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 updateSearchLocation(lat, lng, "내 위치");
-                document.getElementById('currentStatusText').innerText = `내 위치 설정 완료 (위도: ${lat.toFixed(4)}, 경도: ${lng.toFixed(4)})`;
             },
             (error) => {
-                alert("GPS 위치 정보를 가져올 수 없습니다. 브라우저 위치 권한을 확인해주세요.");
-                document.getElementById('currentStatusText').innerText = "GPS 위치 조회 실패";
+                alert("GPS 위치 정보를 가져올 수 없습니다.");
             }
         );
     } else {
-        alert("이 브라우저는 GPS 위치 서비스를 지원하지 않습니다.");
+        alert("GPS 서비스를 지원하지 않는 브라우저입니다.");
     }
 }
 
-// 명칭 기반 위치 검색
 function searchLocationByName() {
     const query = document.getElementById('locationSearchInput').value.trim();
     if (!query) {
@@ -509,23 +508,20 @@ function searchLocationByName() {
     }
 
     if (geocoder) {
-        geocoder.geocode({ 
-            address: query,
-            language: 'ko'
-        }, (results, status) => {
+        geocoder.geocode({ address: query, language: 'ko' }, (results, status) => {
             if (status === "OK" && results[0]) {
                 const loc = results[0].geometry.location;
+                currentAddressName = results[0].formatted_address || query;
                 updateSearchLocation(loc.lat(), loc.lng(), query);
             } else {
                 alert("해당 장소의 위치 정보를 찾을 수 없습니다.");
             }
         });
     } else {
-        alert("구글 지도 SDK가 연동되지 않았습니다. API Key를 입력하여 SDK를 연동해 주세요.");
+        alert("Google API 키를 입력해 주세요.");
     }
 }
 
-// 기준점 위치 설정
 function updateSearchLocation(lat, lng, label) {
     document.getElementById('myLat').value = lat;
     document.getElementById('myLng').value = lng;
@@ -535,11 +531,24 @@ function updateSearchLocation(lat, lng, label) {
         googleMap.setZoom(13);
     }
 
+    fetchCurrentLocationAddress();
     renderSpatialData();
     document.getElementById('currentStatusText').innerText = `'${extractCleanName(label)}' 기준점이 설정되었습니다.`;
 }
 
-// 구글 지도 객체 생성
+function fetchCurrentLocationAddress() {
+    const lat = parseFloat(document.getElementById('myLat').value);
+    const lng = parseFloat(document.getElementById('myLng').value);
+
+    if (geocoder) {
+        geocoder.geocode({ location: { lat, lng }, language: 'ko' }, (results, status) => {
+            if (status === "OK" && results[0]) {
+                currentAddressName = results[0].formatted_address;
+            }
+        });
+    }
+}
+
 function initGoogleMap() {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -559,8 +568,6 @@ function zoomMap(delta) {
     if (googleMap) {
         let currentZoom = googleMap.getZoom();
         googleMap.setZoom(currentZoom + delta);
-    } else {
-        alert("지도가 로드되지 않았습니다. API Key를 설정해 주세요.");
     }
 }
 
@@ -575,7 +582,6 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
-// 데이터 파싱 및 저장 로직
 function processAndSaveData(data) {
     let countryData = data.CountryDB || data.country_table || {};
     let cityData = data.CityDB || data.city_table || {};
@@ -610,33 +616,29 @@ function processAndSaveData(data) {
     renderSpatialData();
 }
 
-// 시스템 개시 시 자동으로 DB JSON 파싱 시도
-async function autoLoadSystemData() {
-    try {
-        // 서버 환경에 기본 제공되는 JSON 데이터 파일 경로 (필요 시 파일명 수정)
-        const response = await fetch('./system_db.json');
-        if (response.ok) {
-            const data = await response.json();
-            processAndSaveData(data);
-            document.getElementById('currentStatusText').innerText = "상태: 시스템 DB 파일(system_db.json)이 성공적으로 자동 로드되었습니다.";
-            return;
-        }
-    } catch (e) {
-        console.log("자동 로드 실패, 로컬 브라우저 저장소 데이터 점검으로 전환합니다.");
+function autoInitDatabase() {
+    let loaded = false;
+
+    const localPoi = JSON.parse(localStorage.getItem('PoiDB') || '{}');
+    if (Object.keys(localPoi).length > 0) {
+        loaded = true;
+    } 
+    
+    if (!loaded && window.DEFAULT_SYSTEM_DATA) {
+        processAndSaveData(window.DEFAULT_SYSTEM_DATA);
+        loaded = true;
     }
 
-    // 파일 로드 실패 시 localStorage 재확인
-    const poiDB = JSON.parse(localStorage.getItem('PoiDB') || '{}');
-    const restDB = JSON.parse(localStorage.getItem('RestaurantDB') || '{}');
+    refreshDatabaseViews();
+    renderSpatialData();
 
-    if (Object.keys(poiDB).length > 0 || Object.keys(restDB).length > 0) {
-        document.getElementById('currentStatusText').innerText = "상태: 기존 저장소 데이터를 불러왔습니다.";
+    if (loaded) {
+        document.getElementById('currentStatusText').innerText = "상태: 시스템 시작 시 DB가 자동으로 로드되었습니다.";
     } else {
-        document.getElementById('currentStatusText').innerText = "상태: DB 데이터가 없습니다. 상단 버튼으로 JSON 파일을 불러와 주세요.";
+        document.getElementById('currentStatusText').innerText = "상태: DB 데이터가 비어있습니다. 수동 DB 수신 버튼을 이용해주세요.";
     }
 }
 
-// 파일 선택을 통한 수동 업로드
 function importSystemDataFromFile() {
     const fileInput = document.createElement("input");
     fileInput.type = "file"; 
@@ -651,11 +653,10 @@ function importSystemDataFromFile() {
             try {
                 const data = JSON.parse(event.target.result);
                 processAndSaveData(data);
-                document.getElementById('currentStatusText').innerText = "파일 데이터가 성공적으로 로드되었습니다.";
+                document.getElementById('currentStatusText').innerText = "파일 데이터가 성공적으로 수신되었습니다.";
                 alert("파일을 성공적으로 불러왔습니다.");
             } catch (err) {
                 alert("JSON 파일 처리 중 오류가 발생했습니다.");
-                console.error(err);
             }
         };
         reader.readAsText(file);
@@ -668,7 +669,6 @@ function clearMapMarkers() {
     mapMarkers = [];
 }
 
-// 반경 내 시각화
 function renderSpatialData() {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -680,7 +680,6 @@ function renderSpatialData() {
 
     if (googleMap) {
         googleMap.setCenter({ lat: myLat, lng: myLng });
-        
         let myMarker = new google.maps.Marker({
             position: { lat: myLat, lng: myLng },
             map: googleMap,
@@ -723,7 +722,6 @@ function renderSpatialData() {
     allItems.forEach(item => renderItemOnBoardAndList(item));
 }
 
-// 개별 카드 및 지도 마커 등록
 function renderItemOnBoardAndList(item) {
     const infoList = document.getElementById('infoCardList');
     const cleanName = extractCleanName(item.name);
@@ -751,22 +749,21 @@ function renderItemOnBoardAndList(item) {
     let hours = item.data.영업시간 || item.data.hours || "정보 없음";
     let web = item.data.홈페이지 || item.data.website || "정보 없음";
     let phone = item.data.전화번호 || item.data.phone || "정보 없음";
-    let address = item.data.주소 || item.data.address || "정보 없음";
+    let address = item.data.주소 || item.data.address || "";
 
     const card = document.createElement('div');
     card.className = `info-card ${item.type === 'Restaurant' ? 'rest' : ''}`;
-    
     let badgeClass = item.source === 'DB내' ? 'badge-db' : 'badge-api';
 
     card.innerHTML = `
         <div>
             <strong>[${cleanName}]</strong> - 거리: ${item.dist.toFixed(2)} Km<br>
             평점: ${rating} | 영업시간: ${hours}<br>
-            주소: ${address}<br>
+            주소: ${address || "정보 없음"}<br>
             홈페이지: ${web} | 전화번호: ${phone}
         </div>
         <div class="card-actions">
-            <button class="walk-btn" onclick="openWalkingDirections(event, ${item.lat}, ${item.lng}, '${cleanName}', '${item.placeId || ''}')">걸어가기</button>
+            <button class="walk-btn" onclick="openWalkingDirections(event, ${item.lat}, ${item.lng}, '${cleanName}', '${address}', '${item.placeId || ''}')">걸어가기</button>
             <span class="badge-source ${badgeClass}">${item.source}</span>
         </div>
     `;
@@ -778,22 +775,35 @@ function renderItemOnBoardAndList(item) {
     infoList.appendChild(card);
 }
 
-// 개선된 도보 길찾기 구글 맵 연결 함수 (도로상 위치 매칭 오류 해결)
-function openWalkingDirections(event, destLat, destLng, destName, placeId) {
-    event.stopPropagation(); // 카드 상위 클릭 방지
+// [핵심 개선] DB 도착지가 도로망에 없어도 명칭/주소를 기반으로 구글 맵 도보 경로를 100% 활성화하는 함수
+function openWalkingDirections(event, destLat, destLng, destName, destAddress, placeId) {
+    event.stopPropagation();
 
-    // 비도로상 위치 좌표 문제 해결: 특정 좌표 대신 구글 맵의 'My Location' 키워드를 활용해 구글 내부의 자동 도로 인덱싱 매칭
-    let walkUrl = "";
-    if (placeId) {
-        walkUrl = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${encodeURIComponent(destName)}&destination_place_id=${placeId}&travelmode=walking`;
-    } else {
-        walkUrl = `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${destLat},${destLng}&travelmode=walking`;
+    const startLat = parseFloat(document.getElementById('myLat').value);
+    const startLng = parseFloat(document.getElementById('myLng').value);
+
+    // 1. 출발지: 파악된 역지오코딩 주소가 있으면 사용, 없으면 위경도 전달
+    let originParam = currentAddressName ? encodeURIComponent(currentAddressName) : `${startLat},${startLng}`;
+
+    // 2. 도착지: DB 내의 정제된 순수 장소명 + 주소를 최우선 검색어로 지정 (구글 지도가 인도/도로 입구로 자동 매칭)
+    let destSearchQuery = destName;
+    if (destAddress && destAddress !== "정보 없음") {
+        destSearchQuery += ` ${destAddress}`;
+    }
+
+    let destParam = encodeURIComponent(destSearchQuery);
+
+    // 3. 구글 지도 도보 경로 공식 URL 구성
+    let walkUrl = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destParam}&travelmode=walking`;
+    
+    // place_id가 있을 경우 추가 매칭
+    if (placeId && placeId !== 'null' && placeId !== 'undefined') {
+        walkUrl += `&destination_place_id=${placeId}`;
     }
 
     window.open(walkUrl, '_blank');
 }
 
-// 구글 지도 이동 함수
 function openGoogleMapPage(name, lat, lng, placeId) {
     let mapUrl = "";
     if (placeId) {
@@ -804,7 +814,6 @@ function openGoogleMapPage(name, lat, lng, placeId) {
     window.open(mapUrl, '_blank');
 }
 
-// 실시간 탐색
 async function searchUnified(targetType) {
     const myLat = parseFloat(document.getElementById('myLat').value);
     const myLng = parseFloat(document.getElementById('myLng').value);
@@ -820,7 +829,6 @@ async function searchUnified(targetType) {
 
     let matchedList = [];
 
-    // 1단계: DB 내 탐색
     Object.keys(dbData).forEach(k => {
         let item = dbData[k];
         let lat = item.lat || item.latitude || item.위도;
@@ -844,7 +852,6 @@ async function searchUnified(targetType) {
         }
     });
 
-    // 2단계: 실시간 API 탐색
     const apiKey = document.getElementById('apiKey').value.trim();
     if (apiKey) {
         if (!isSdkLoaded) {
@@ -872,7 +879,6 @@ async function searchUnified(targetType) {
                             let lat = typeof p.location.lat === 'function' ? p.location.lat() : p.location.lat;
                             let lng = typeof p.location.lng === 'function' ? p.location.lng() : p.location.lng;
                             let dist = calculateDistance(myLat, myLng, lat, lng);
-                            
                             let cleanPlaceName = extractCleanName(p.displayName);
                             let existsInDb = matchedList.some(item => extractCleanName(item.name) === cleanPlaceName);
                             
@@ -899,7 +905,7 @@ async function searchUnified(targetType) {
                     });
                 }
             } catch (err) {
-                console.error("New Places API 검색 실패:", err);
+                console.error("Places API 검색 실패:", err);
             }
         }
     }
@@ -910,7 +916,7 @@ async function searchUnified(targetType) {
         const topItem = matchedList[0];
         const cleanTopName = extractCleanName(topItem.name);
         
-        let confirmText = `${radiusKm}Km 이내 조건에 부합하는 [${cleanTopName}] 외 ${matchedList.length}곳이 검색되었습니다.\n(가장 가까운 장소 출처: ${topItem.source})\n안내를 진행할까요?`;
+        let confirmText = `${radiusKm}Km 이내 조건에 부합하는 [${cleanTopName}] 외 ${matchedList.length}곳이 검색되었습니다.\n안내를 진행할까요?`;
         
         if (confirm(confirmText)) {
             let speechMsg = `가장 가까운 장소는 ${cleanTopName} 이며, 거리는 ${topItem.dist.toFixed(1)}킬로미터, 평점은 ${topItem.data.Rating || topItem.data.평점}점 입니다.`;
@@ -933,10 +939,9 @@ async function searchUnified(targetType) {
 
             matchedList.forEach(item => renderItemOnBoardAndList(item));
         }
-        document.getElementById('currentStatusText').innerText = `총 ${matchedList.length}개의 ${targetType} 항목을 거리가 가까운 순서로 정렬했습니다.`;
+        document.getElementById('currentStatusText').innerText = `총 ${matchedList.length}개의 ${targetType} 항목을 거리 순으로 정렬했습니다.`;
     } else {
-        alert(`${radiusKm}Km 이내 조건(평점 ${minRating} 이상)에 부합하는 장소가 없습니다.`);
-        document.getElementById('currentStatusText').innerText = "검색 결과가 없습니다.";
+        alert(`${radiusKm}Km 이내 조건에 부합하는 장소가 없습니다.`);
     }
 }
 
@@ -987,9 +992,8 @@ function openTab(evt, tabId) {
     evt.currentTarget.classList.add("active");
 }
 
-// 최초 로드 시 실행
 window.onload = function() {
-    autoLoadSystemData();
+    autoInitDatabase();
 };
 </script>
 
