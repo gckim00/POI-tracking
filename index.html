@@ -2,450 +2,819 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hybrid Travel Assistant App Simulator v5</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hierarchical Word Document Builder Intelligence System</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f2f4f8; color: #222; font-size: 13px; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f6f9;
+        }
         
-        .app-container { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-        .header { background: #1e3c6b; color: #fff; padding: 14px; text-align: center; font-weight: bold; font-size: 15px; }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
         
-        .section { padding: 12px; border-bottom: 1px solid #eef2f7; }
-        .section-title { font-size: 12px; font-weight: bold; color: #555; margin-bottom: 8px; }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 15px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            transition: 0.2s;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button.success {
+            background-color: #28a745;
+        }
+        
+        button.success:hover {
+            background-color: #218838;
+        }
+        
+        button.secondary {
+            background-color: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        button.warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        button.warning:hover {
+            background-color: #e0a800;
+        }
+        
+        #currentStatusText {
+            font-weight: bold;
+            color: #17a2b8;
+            margin-top: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 13px;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+        }
+        
+        .tab-menu {
+            display: flex;
+            gap: 5px;
+            border-bottom: 2px solid #ccc;
+            margin-bottom: 10px;
+        }
+        
+        .tab-btn {
+            background: #e9ecef;
+            color: #495057;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        
+        .tab-btn.active {
+            background: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .input-group label {
+            font-weight: bold;
+            font-size: 12px;
+            color: #495057;
+        }
+        
+        .input-group input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        
+        .display-board {
+            width: 100%;
+            height: 350px;
+            background-color: #eef2f5;
+            border: 2px dashed #b0bec5;
+            border-radius: 8px;
+            position: relative;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+        
+        .marker {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            text-align: center;
+        }
+        
+        .marker-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            border-radius: 50%;
+        }
+        
+        .marker-my {
+            background-color: #dc3545;
+            border: 2px solid #fff;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        
+        .marker-poi {
+            background-color: #007bff;
+            border: 2px solid #fff;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        
+        .marker-rest {
+            background-color: #28a745;
+            border: 2px solid #fff;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        
+        .marker-label {
+            font-size: 11px;
+            background: rgba(255,255,255,0.9);
+            padding: 2px 4px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+            white-space: nowrap;
+            margin-top: 2px;
+        }
+        
+        .info-card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .info-card {
+            background: #fff;
+            border-left: 5px solid #007bff;
+            padding: 10px 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .info-card.rest {
+            border-left-color: #28a745;
+        }
 
-        .api-key-container { background: #ebf8ff; border: 2px solid #0284c7; border-radius: 8px; padding: 10px; margin-bottom: 4px; }
-        .api-key-box { display: flex; gap: 6px; margin-top: 6px; }
-        .api-key-input { flex: 1; padding: 8px; border: 1px solid #0284c7; border-radius: 6px; font-size: 11px; font-weight: bold; }
-
-        .file-upload-wrapper { display: flex; gap: 6px; }
-        .file-upload-box { flex: 1; background: #f8fafc; border: 1.5px dashed #3b82f6; border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; }
-        .file-upload-box input { display: none; }
-        .btn-reset-db { background: #ef4444; color: white; border: none; border-radius: 6px; padding: 0 10px; font-size: 11px; font-weight: bold; cursor: pointer; }
-
-        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
-        .btn { padding: 12px 8px; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.2; }
-        
-        .btn-db-poi { background-color: #0284c7; }
-        .btn-db-res { background-color: #0d9488; }
-        .btn-rt-poi { background-color: #e11d48; }
-        .btn-rt-res { background-color: #d97706; }
-        .btn:active { opacity: 0.85; transform: scale(0.98); }
-
-        .map-container { width: 100%; height: 260px; background-color: #e5e7eb; position: relative; border-radius: 8px; overflow: hidden; margin-top: 8px; border: 1px solid #d1d5db; }
-        .radar-screen { width: 100%; height: 100%; position: relative; background: radial-gradient(circle, #ffffff 0%, #f3f4f6 70%, #e5e7eb 100%); }
-        .center-marker { width: 12px; height: 12px; background: #2563eb; border: 2px solid #fff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; box-shadow: 0 0 8px rgba(37,99,235,0.6); }
-        .range-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 1px dashed #9ca3af; border-radius: 50%; pointer-events: none; }
-        
-        .map-pin { position: absolute; transform: translate(-50%, -50%); padding: 4px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; color: white; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .pin-poi { background: #0284c7; }
-        .pin-res { background: #0d9488; }
-
-        .status-box { background: #eff6ff; border-left: 4px solid #2563eb; padding: 10px; font-size: 11px; margin-top: 8px; border-radius: 0 4px 4px 0; }
-        
-        .results-list { flex: 1; padding: 12px; overflow-y: auto; background: #fafafa; }
-        .card { background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 13px; color: #1e293b; margin-bottom: 4px; }
-        .card-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; }
-        .card-body { font-size: 11px; color: #475569; line-height: 1.5; }
-        
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999; justify-content: center; align-items: center; }
-        .modal-box { background: white; width: 85%; max-width: 360px; padding: 20px; border-radius: 12px; text-align: center; }
-        .modal-title { font-size: 14px; font-weight: bold; color: #0f172a; margin-bottom: 10px; }
-        .modal-desc { font-size: 12px; color: #334155; margin-bottom: 16px; line-height: 1.4; }
-        .modal-btns { display: flex; gap: 8px; justify-content: center; }
-        .btn-modal { padding: 8px 16px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer; }
-        .btn-yes { background: #2563eb; color: white; }
-        .btn-no { background: #e2e8f0; color: #475569; }
+        .badge-source {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .badge-db { background-color: #17a2b8; }
+        .badge-api { background-color: #fd7e14; }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <div class="header">스마트 여행 AI 비서 시뮬레이터</div>
+<div class="container">
+    <h1>Hierarchical Word Document Builder Intelligence System</h1>
 
-    <div class="section">
-        <div class="api-key-container">
-            <div class="section-title" style="color:#0369a1;">🔑 1. Google Places API Key 설정</div>
-            <div class="api-key-box">
-                <input type="password" id="apiKeyInput" class="api-key-input" placeholder="Google Maps API Key 입력">
-                <button class="btn" style="background:#0284c7; padding:0 12px;" onclick="saveApiKey()">저장</button>
+    <!-- 1. 제어 및 데이터 파일 입출력 -->
+    <div class="card">
+        <h3>1. 시스템 데이터 입출력</h3>
+        <div class="btn-group">
+            <button class="success" onclick="importSystemDataFromFile()">시스템 쿼리결과 파일 불러오기 (.json)</button>
+            <button class="secondary" onclick="exportSystemDataToFile()">시스템 쿼리결과 파일 내보내기 (.json)</button>
+        </div>
+        <div id="currentStatusText">상태: 대기 중...</div>
+    </div>
+
+    <!-- 2. 위치 및 탐색 매개변수 설정 -->
+    <div class="card">
+        <h3>2. 위치 및 공간 탐색 매개변수 설정</h3>
+        <div class="input-grid">
+            <div class="input-group">
+                <label for="myLat">위도 (Lat):</label>
+                <input type="number" id="myLat" step="0.0001" value="37.4292">
+            </div>
+            <div class="input-group">
+                <label for="myLng">경도 (Lng):</label>
+                <input type="number" id="myLng" step="0.0001" value="127.0182">
+            </div>
+            <div class="input-group">
+                <label for="mapRadius">기본 도식화 반경 (Km):</label>
+                <input type="number" id="mapRadius" value="50">
+            </div>
+            <div class="input-group">
+                <label for="searchRadius">실시간 탐색 반경 (Km):</label>
+                <input type="number" id="searchRadius" value="20">
+            </div>
+            <div class="input-group">
+                <label for="poiMinRating">POI 최소 평점:</label>
+                <input type="number" id="poiMinRating" step="0.1" value="4.5">
+            </div>
+            <div class="input-group">
+                <label for="restMinRating">식당 최소 평점:</label>
+                <input type="number" id="restMinRating" step="0.1" value="4.7">
+            </div>
+            <div class="input-group" style="grid-column: span 2;">
+                <label for="apiKey">Google Places API Key (선택):</label>
+                <input type="password" id="apiKey" placeholder="API Key 입력 시 로컬서버(http://) 환경에서 작동" onchange="loadGoogleMapsScript()">
             </div>
         </div>
-    </div>
 
-    <div class="section">
-        <div class="section-title">📁 2. 데이터베이스(.json) 불러오기 및 상시 보관</div>
-        <div class="file-upload-wrapper">
-            <div class="file-upload-box" onclick="document.getElementById('jsonFileInput').click()">
-                <span id="uploadLabel">📁 query_system_data.json 선택</span>
-                <input type="file" id="jsonFileInput" accept=".json" onchange="importSystemJSON(event)">
-            </div>
-            <button class="btn-reset-db" onclick="resetPersistentDB()">DB 초기화</button>
+        <div class="btn-group">
+            <button onclick="renderSpatialData()">설정 반경 시각화</button>
+            <button class="warning" onclick="showDbItemsWithin('POI')">DB 내 POI 탐색</button>
+            <button class="warning" onclick="showDbItemsWithin('Restaurant')">DB 내 식당 탐색</button>
+            <button onclick="searchRealtime('POI')">실시간 POI 탐색 (가까운 순 정렬)</button>
+            <button onclick="searchRealtime('Restaurant')">실시간 식당 탐색 (가까운 순 정렬)</button>
         </div>
-    </div>
 
-    <div class="section">
-        <div class="section-title">📍 3. 내 현재 위치 및 서치 제어</div>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span id="locationText" style="font-weight:bold; color:#1e3c6b;">GPS 측정 중...</span>
-            <button class="btn" style="background:#4b5563; padding:4px 8px;" onclick="updateCurrentLocation()">위치 갱신</button>
-        </div>
-        <div class="status-box" id="statusBox">GPS 위치 정보를 수신하고 있습니다.</div>
-    </div>
-
-    <div class="section">
-        <div class="section-title">⚡ 4. 탐색 모드 선택 (버튼 클릭 시 서치)</div>
-        <div class="btn-grid">
-            <button class="btn btn-db-poi" onclick="searchDBPlace('POI')">DB내 POI<br>(1km 이내)</button>
-            <button class="btn btn-db-res" onclick="searchDBPlace('식당')">DB내 식당<br>(1km 이내)</button>
-            <button class="btn btn-rt-poi" onclick="searchRealtimePlace('POI')">실시간 POI<br>(50m / 평점 4.3↑)</button>
-            <button class="btn btn-rt-res" onclick="searchRealtimePlace('식당')">실시간 식당<br>(50m / 평점 4.2↑)</button>
-        </div>
-    </div>
-
-    <div class="section" style="padding-top:0;">
-        <div class="map-container">
-            <div class="radar-screen" id="radarMap">
-                <div class="center-marker" title="내 위치"></div>
-                <div class="range-circle" style="width: 220px; height: 220px;" title="1km 범위"></div>
-                <div class="range-circle" style="width: 50px; height: 50px; border-color: #ef4444;" title="50m 범위"></div>
+        <div class="display-board" id="spatialBoard">
+            <div style="text-align: center; padding-top: 160px; color: #888;">
+                위치 및 공간 데이터 도식화 영역
             </div>
         </div>
+
+        <div class="info-card-list" id="infoCardList"></div>
     </div>
 
-    <div class="results-list" id="resultsList">
-        <div style="text-align:center; color:#94a3b8; padding-top:20px;">상단 버튼을 눌러 탐색 결과 목록을 확인하세요.</div>
+    <!-- 3. 복원된 데이터베이스 테이블 뷰어 -->
+    <div class="card">
+        <h3>3. 시스템 데이터베이스 (DB 복원 테이블)</h3>
+        <div class="tab-menu">
+            <button class="tab-btn active" onclick="openTab(event, 'tab-country')">CountryDB</button>
+            <button class="tab-btn" onclick="openTab(event, 'tab-city')">CityDB</button>
+            <button class="tab-btn" onclick="openTab(event, 'tab-poi')">PoiDB</button>
+            <button class="tab-btn" onclick="openTab(event, 'tab-restaurant')">RestaurantDB</button>
+            <button class="tab-btn" onclick="openTab(event, 'tab-hierarchy')">HierarchyMapDB</button>
+        </div>
+
+        <div id="tab-country" class="tab-content active">
+            <div id="view-country">데이터가 없습니다.</div>
+        </div>
+        <div id="tab-city" class="tab-content">
+            <div id="view-city">데이터가 없습니다.</div>
+        </div>
+        <div id="tab-poi" class="tab-content">
+            <div id="view-poi">데이터가 없습니다.</div>
+        </div>
+        <div id="tab-restaurant" class="tab-content">
+            <div id="view-restaurant">데이터가 없습니다.</div>
+        </div>
+        <div id="tab-hierarchy" class="tab-content">
+            <div id="view-hierarchy">데이터가 없습니다.</div>
+        </div>
     </div>
 </div>
 
-<div class="modal-overlay" id="promptModal">
-    <div class="modal-box">
-        <div class="modal-title">주변 추천 장소 감지</div>
-        <div class="modal-desc" id="modalPromptText">50미터 이내에 추천 장소가 있습니다. 소개해 드릴까요?</div>
-        <div class="modal-btns">
-            <button class="btn-modal btn-yes" onclick="confirmVoiceRecommendation(true)">예 (Yes)</button>
-            <button class="btn-modal btn-no" onclick="confirmVoiceRecommendation(false)">아니오</button>
-        </div>
-    </div>
-</div>
+<div id="dummyMap" style="display:none;"></div>
 
 <script>
-    let userLocation = { lat: 37.4292, lng: 126.9892 }; // 과천시청 기본 좌표
-    
-    let dbPoiTable = [];
-    let dbRestaurantTable = [];
-    let pendingRealtimePlace = null;
-    let googleApiKey = "";
+let googlePlacesService = null;
 
-    window.onload = () => {
-        const savedKey = localStorage.getItem('Google_Places_API_Key');
-        if (savedKey) {
-            googleApiKey = savedKey;
-            document.getElementById('apiKeyInput').value = savedKey;
-        }
+function loadGoogleMapsScript() {
+    if (window.location.protocol === 'file:') {
+        alert("file:// 로컬 파일 환경에서는 보안 정책으로 인해 Google API 스크립트를 불러올 수 없습니다. Live Server 등 로컬 웹 서버(http://)를 사용하여 실행해 주세요.");
+        return;
+    }
 
-        loadFromPersistentMemory();
-        updateCurrentLocation();
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (!apiKey) return;
+
+    if (window.google && window.google.maps) {
+        initPlacesService();
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initPlacesService`;
+    script.async = true;
+    script.onerror = function() {
+        alert("Google Maps 스크립트를 불러올 수 없습니다. API Key 및 도메인 설정을 확인해주세요.");
+        document.getElementById('currentStatusText').innerText = "Google API 스크립트 로드 실패";
     };
+    document.head.appendChild(script);
+}
 
-    function saveApiKey() {
-        const key = document.getElementById('apiKeyInput').value.trim();
-        if (!key) {
-            alert("API Key를 입력해주세요.");
-            return;
-        }
-        googleApiKey = key;
-        localStorage.setItem('Google_Places_API_Key', key);
-        alert("Google API Key가 저장되었습니다.");
+function initPlacesService() {
+    try {
+        const dummyDiv = document.getElementById('dummyMap');
+        const map = new google.maps.Map(dummyDiv, {
+            center: { lat: 37.5665, lng: 126.9780 },
+            zoom: 15
+        });
+        googlePlacesService = new google.maps.places.PlacesService(map);
+        document.getElementById('currentStatusText').innerText = "Google Places API 연동 준비 완료";
+    } catch (e) {
+        console.error("SDK 초기화 오류", e);
     }
+}
 
-    function loadFromPersistentMemory() {
-        const savedData = localStorage.getItem('App_Dummy_DB');
-        if (savedData) {
-            try {
-                const parsed = JSON.parse(savedData);
-                parseAndBuildDatabase(parsed);
-                document.getElementById('uploadLabel').innerText = `💾 저장된 DB 자동 로드 완료 (POI:${dbPoiTable.length}, 식당:${dbRestaurantTable.length})`;
-                document.getElementById('statusBox').innerText = "상시 메모리에서 정제된 실제 DB 데이터를 로드했습니다.";
-                return true;
-            } catch (e) {
-                console.error("저장된 DB 파싱 실패:", e);
-                return false;
-            }
-        }
-        return false;
-    }
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
 
-    function importSystemJSON(event) {
-        const file = event.target.files[0];
+function importSystemDataFromFile() {
+    const fileInput = document.createElement("input");
+    fileInput.type = "file"; 
+    fileInput.accept = ".json";
+    
+    fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
         if (!file) return;
-
+        
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = (event) => {
             try {
-                const rawData = JSON.parse(e.target.result);
-                parseAndBuildDatabase(rawData);
-                localStorage.setItem('App_Dummy_DB', JSON.stringify(rawData));
+                const data = JSON.parse(event.target.result);
+                
+                let countryData = data.CountryDB || data.country_table || {};
+                let cityData = data.CityDB || data.city_table || {};
+                let poiData = data.PoiDB || data.poi_table || {};
+                let restData = data.RestaurantDB || data.restaurant_table || {};
+                let hierarchyData = data.HierarchyMapDB || {};
 
-                document.getElementById('uploadLabel').innerText = `✔️ DB 구축 완료 (POI:${dbPoiTable.length}, 식당:${dbRestaurantTable.length})`;
-                document.getElementById('statusBox').innerText = "query_system_data.json 파일 파싱이 성공적으로 완료되었습니다.";
+                if (Array.isArray(countryData)) {
+                    let obj = {};
+                    countryData.forEach(item => { if (item["국가명"]) obj[item["국가명"]] = item; });
+                    countryData = obj;
+                }
+                if (Array.isArray(cityData)) {
+                    let obj = {};
+                    cityData.forEach(item => { if (item["국가명"] && item["도시명"]) obj[`${item["국가명"]}_${item["도시명"]}`] = item; });
+                    cityData = obj;
+                }
+                if (Array.isArray(poiData)) {
+                    let obj = {};
+                    poiData.forEach(item => { 
+                        let key = item["POI"] || item["이름"] || item["명칭"];
+                        if (key) obj[key] = item; 
+                    });
+                    poiData = obj;
+                }
+                if (Array.isArray(restData)) {
+                    let obj = {};
+                    restData.forEach(item => { 
+                        let key = item["식당명"] || item["이름"] || item["명칭"];
+                        if (key) obj[key] = item; 
+                    });
+                    restData = obj;
+                }
+
+                localStorage.setItem('CountryDB', JSON.stringify(countryData));
+                localStorage.setItem('CityDB', JSON.stringify(cityData));
+                localStorage.setItem('PoiDB', JSON.stringify(poiData));
+                localStorage.setItem('RestaurantDB', JSON.stringify(restData));
+                localStorage.setItem('HierarchyMapDB', JSON.stringify(hierarchyData));
+
+                refreshDatabaseViews();
+                renderSpatialData();
+
+                document.getElementById('currentStatusText').innerText = "파일 데이터가 성공적으로 로드되었습니다.";
+                alert("파일을 성공적으로 불러왔습니다.");
+
             } catch (err) {
-                alert("JSON 파싱 오류가 발생했습니다.");
+                alert("JSON 파일 처리 중 오류가 발생했습니다.");
+                console.error(err);
             }
         };
         reader.readAsText(file);
+    });
+    fileInput.click();
+}
+
+function exportSystemDataToFile() {
+    try {
+        const countryDB = JSON.parse(localStorage.getItem('CountryDB') || '{}');
+        const cityDB = JSON.parse(localStorage.getItem('CityDB') || '{}');
+        const poiDB = JSON.parse(localStorage.getItem('PoiDB') || '{}');
+        const restaurantDB = JSON.parse(localStorage.getItem('RestaurantDB') || '{}');
+        const hierarchyMapDB = JSON.parse(localStorage.getItem('HierarchyMapDB') || '{}');
+
+        const exportData = {
+            CountryDB: countryDB,
+            CityDB: cityDB,
+            PoiDB: poiDB,
+            RestaurantDB: restaurantDB,
+            HierarchyMapDB: hierarchyMapDB
+        };
+
+        const jsonString = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        a.download = `query_system_data_export_${dateStr}.json`;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        document.getElementById('currentStatusText').innerText = "시스템 데이터가 JSON 파일로 저장되었습니다.";
+    } catch (err) {
+        alert("파일 내보내기 중 오류가 발생했습니다.");
+        console.error(err);
     }
+}
 
-    function parseAndBuildDatabase(data) {
-        const rawDB = data.GeneralDB_v8 || data;
+function renderSpatialData() {
+    const myLat = parseFloat(document.getElementById('myLat').value);
+    const myLng = parseFloat(document.getElementById('myLng').value);
+    const maxRadiusKm = parseFloat(document.getElementById('mapRadius').value);
 
-        dbPoiTable = [];
-        dbRestaurantTable = [];
+    const board = document.getElementById('spatialBoard');
+    const infoList = document.getElementById('infoCardList');
+    board.innerHTML = "";
+    infoList.innerHTML = "";
 
-        const systemKeys = ['CountryDB', 'CityDB', 'PoiDB', 'hierarchyMonitorData'];
+    const myMarker = document.createElement('div');
+    myMarker.className = 'marker';
+    myMarker.style.left = '50%';
+    myMarker.style.top = '50%';
+    myMarker.innerHTML = `<div class="marker-icon marker-my"></div><div class="marker-label">내 위치</div>`;
+    board.appendChild(myMarker);
 
-        Object.keys(rawDB).forEach(key => {
-            if (systemKeys.includes(key) || key.startsWith('BoxB_Setup')) return;
+    const poiDB = JSON.parse(localStorage.getItem('PoiDB') || '{}');
+    const restDB = JSON.parse(localStorage.getItem('RestaurantDB') || '{}');
 
-            const item = rawDB[key];
-            if (typeof item !== 'object' || item === null) return;
+    let allItems = [];
 
-            const rawLat = item["위도"] || item["lat"] || item["latitude"] || item["LAT"] || item["Latitude"];
-            const rawLng = item["경도"] || item["lng"] || item["longitude"] || item["LNG"] || item["Longitude"];
-
-            const parsedLat = parseFloat(rawLat);
-            const parsedLng = parseFloat(rawLng);
-
-            const placeName = item["A2_항목"] || item["장소명"] || item["명칭"] || item["A1_항목"] || item["국가명"] || item["name"] || key;
-
-            const record = {
-                id: key,
-                name: placeName,
-                lat: isNaN(parsedLat) ? null : parsedLat,
-                lng: isNaN(parsedLng) ? null : parsedLng,
-                rating: parseFloat(item["평점"] || item["rating"] || 4.5),
-                hours: item["영업시간"] || item["hours"] || "정보 없음",
-                phone: item["전화번호"] || item["phone"] || item["TEL"] || "정보 없음",
-                web: item["홈페이지"] || item["web"] || item["URL"] || "정보 없음",
-                desc: item["B1_1"] || item["설명"] || item["개요"] || "상세 정보 없음"
-            };
-
-            const isRestaurant = key.includes("식당") || key.includes("음식") || key.includes("Restaurant") || 
-                                 placeName.includes("식당") || placeName.includes("맛집") ||
-                                 (item["분류"] && item["분류"].includes("식당"));
-
-            if (isRestaurant) {
-                record.type = "식당";
-                dbRestaurantTable.push(record);
-            } else {
-                record.type = "POI";
-                dbPoiTable.push(record);
+    Object.keys(poiDB).forEach(k => {
+        let item = poiDB[k];
+        let lat = item.lat || item.latitude || item.위도;
+        let lng = item.lng || item.longitude || item.경도;
+        if (lat && lng) {
+            let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
+            if (dist <= maxRadiusKm) {
+                allItems.push({ type: 'POI', name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB' });
             }
-        });
-    }
-
-    function resetPersistentDB() {
-        if (confirm("상시 메모리에 저장된 데이터베이스를 삭제하시겠습니까?")) {
-            localStorage.removeItem('App_Dummy_DB');
-            dbPoiTable = [];
-            dbRestaurantTable = [];
-            document.getElementById('uploadLabel').innerText = "📁 query_system_data.json 선택";
-            document.getElementById('statusBox').innerText = "DB 데이터가 초기화되었습니다.";
-            document.getElementById('resultsList').innerHTML = `<div style="text-align:center; color:#94a3b8; padding-top:20px;">상단 버튼을 눌러 탐색 결과 목록을 확인하세요.</div>`;
-            clearRadarMap();
         }
-    }
+    });
 
-    function updateCurrentLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    userLocation.lat = pos.coords.latitude;
-                    userLocation.lng = pos.coords.longitude;
-                    document.getElementById('locationText').innerText = `내 위치: ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
-                    document.getElementById('statusBox').innerText = "실제 현재 GPS 위치 측정 완료.";
-                },
-                (err) => {
-                    document.getElementById('locationText').innerText = "GPS 측정 실패 (과천시청 기본값)";
-                    document.getElementById('statusBox').innerText = "GPS 권한이 없거나 측정이 거부되었습니다.";
-                },
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
+    Object.keys(restDB).forEach(k => {
+        let item = restDB[k];
+        let lat = item.lat || item.latitude || item.위도;
+        let lng = item.lng || item.longitude || item.경도;
+        if (lat && lng) {
+            let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
+            if (dist <= maxRadiusKm) {
+                allItems.push({ type: 'Restaurant', name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB' });
+            }
         }
-    }
+    });
 
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        if (lat1 === null || lon1 === null || lat2 === null || lon2 === null) return 99999;
-        const R = 6371;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
-    }
+    allItems.sort((a, b) => a.dist - b.dist);
 
-    function searchDBPlace(type) {
-        const targetTable = (type === 'POI') ? dbPoiTable : dbRestaurantTable;
-        const resultsList = document.getElementById('resultsList');
-        resultsList.innerHTML = '';
-        clearRadarMap();
+    allItems.forEach(item => {
+        renderItemOnBoardAndList(item, myLat, myLng);
+    });
+}
 
-        if (targetTable.length === 0) {
-            resultsList.innerHTML = `<div style="text-align:center; padding:20px; color:#64748b;">DB에 등록된 ${type} 데이터가 없습니다. JSON을 업로드해 주세요.</div>`;
+function renderItemOnBoardAndList(item, myLat, myLng) {
+    const board = document.getElementById('spatialBoard');
+    const infoList = document.getElementById('infoCardList');
+
+    let dLat = item.lat - myLat;
+    let dLng = item.lng - myLng;
+
+    let posX = Math.max(5, Math.min(95, 50 + (dLng * 150)));
+    let posY = Math.max(5, Math.min(95, 50 - (dLat * 150)));
+
+    const marker = document.createElement('div');
+    marker.className = 'marker';
+    marker.style.left = posX + '%';
+    marker.style.top = posY + '%';
+
+    let iconClass = item.type === 'POI' ? 'marker-poi' : 'marker-rest';
+    marker.innerHTML = `<div class="marker-icon ${iconClass}"></div><div class="marker-label">${item.name} (${item.dist.toFixed(1)}km)</div>`;
+    board.appendChild(marker);
+
+    let rating = item.data.Rating || item.data.평점 || "정보 없음";
+    let hours = item.data.영업시간 || item.data.hours || "정보 없음";
+    let web = item.data.홈페이지 || item.data.website || "정보 없음";
+    let phone = item.data.전화번호 || item.data.phone || "정보 없음";
+
+    const card = document.createElement('div');
+    card.className = `info-card ${item.type === 'Restaurant' ? 'rest' : ''}`;
+    
+    let badgeClass = item.source === 'DB' ? 'badge-db' : 'badge-api';
+    let sourceText = item.source === 'DB' ? 'DB 검색' : 'API 실시간';
+
+    card.innerHTML = `
+        <div>
+            <strong>[${item.type}] ${item.name}</strong> - 거리: ${item.dist.toFixed(2)} Km<br>
+            평점: ${rating} | 영업시간: ${hours}<br>
+            홈페이지: ${web} | 전화번호: ${phone}
+        </div>
+        <div>
+            <span class="badge-source ${badgeClass}">${sourceText}</span>
+        </div>
+    `;
+    infoList.appendChild(card);
+}
+
+function showDbItemsWithin(targetType) {
+    const myLat = parseFloat(document.getElementById('myLat').value);
+    const myLng = parseFloat(document.getElementById('myLng').value);
+    const radiusKm = parseFloat(document.getElementById('searchRadius').value);
+
+    const board = document.getElementById('spatialBoard');
+    const infoList = document.getElementById('infoCardList');
+    board.innerHTML = "";
+    infoList.innerHTML = "";
+
+    const myMarker = document.createElement('div');
+    myMarker.className = 'marker';
+    myMarker.style.left = '50%';
+    myMarker.style.top = '50%';
+    myMarker.innerHTML = `<div class="marker-icon marker-my"></div><div class="marker-label">내 위치</div>`;
+    board.appendChild(myMarker);
+
+    const dbKey = targetType === 'POI' ? 'PoiDB' : 'RestaurantDB';
+    const dbData = JSON.parse(localStorage.getItem(dbKey) || '{}');
+
+    let matchedList = [];
+
+    Object.keys(dbData).forEach(k => {
+        let item = dbData[k];
+        let lat = item.lat || item.latitude || item.위도;
+        let lng = item.lng || item.longitude || item.경도;
+        if (lat && lng) {
+            let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
+            if (dist <= radiusKm) {
+                matchedList.push({ type: targetType, name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB' });
+            }
+        }
+    });
+
+    matchedList.sort((a, b) => a.dist - b.dist);
+    matchedList.forEach(item => renderItemOnBoardAndList(item, myLat, myLng));
+
+    document.getElementById('currentStatusText').innerText = `${radiusKm}Km 이내 DB 내 ${targetType} ${matchedList.length}개를 거리가 가까운 순서로 정렬했습니다.`;
+}
+
+async function searchRealtime(targetType) {
+    const myLat = parseFloat(document.getElementById('myLat').value);
+    const myLng = parseFloat(document.getElementById('myLng').value);
+    const radiusKm = parseFloat(document.getElementById('searchRadius').value);
+    const minRating = targetType === 'POI' 
+        ? parseFloat(document.getElementById('poiMinRating').value)
+        : parseFloat(document.getElementById('restMinRating').value);
+
+    document.getElementById('currentStatusText').innerText = `실시간 ${targetType} 검색 수행 중...`;
+
+    const dbKey = targetType === 'POI' ? 'PoiDB' : 'RestaurantDB';
+    const dbData = JSON.parse(localStorage.getItem(dbKey) || '{}');
+
+    let matchedList = [];
+
+    // 1단계: DB 내 데이터 탐색
+    Object.keys(dbData).forEach(k => {
+        let item = dbData[k];
+        let lat = item.lat || item.latitude || item.위도;
+        let lng = item.lng || item.longitude || item.경도;
+        let rating = parseFloat(item.Rating || item.평점 || 0);
+
+        if (lat && lng) {
+            let dist = calculateDistance(myLat, myLng, parseFloat(lat), parseFloat(lng));
+            if (dist <= radiusKm && rating >= minRating) {
+                matchedList.push({ type: targetType, name: k, dist: dist, lat: parseFloat(lat), lng: parseFloat(lng), data: item, source: 'DB' });
+            }
+        }
+    });
+
+    // 2단계: Google SDK 사용 실시간 검색
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (apiKey) {
+        if (window.location.protocol === 'file:') {
+            alert("file:// 환경에서는 구글 API 연동이 차단됩니다. 로컬 서버(http://) 환경에서 실행해주세요.");
+            document.getElementById('currentStatusText').innerText = "로컬 서버 환경 필요";
             return;
         }
 
-        const nearby = targetTable.map(item => {
-            const dist = calculateDistance(userLocation.lat, userLocation.lng, item.lat, item.lng);
-            return { ...item, distance: dist };
-        }).filter(item => item.distance <= 1.0)
-          .sort((a,b) => a.distance - b.distance);
-
-        document.getElementById('statusBox').innerText = `[DB ${type} 서치] 내 위치 기준 1km 이내 ${nearby.length}곳 감지됨.`;
-
-        if (nearby.length === 0) {
-            resultsList.innerHTML = `<div style="text-align:center; padding:20px; color:#64748b;">내 현재 위치 주변 1km 이내에 해당하는 DB내 ${type}가 없습니다.</div>`;
+        if (!googlePlacesService) {
+            loadGoogleMapsScript();
+            alert("Google API SDK 로드 중입니다. 잠시 후 다시 시도해주세요.");
+            document.getElementById('currentStatusText').innerText = "Google API 초기화 중...";
             return;
         }
 
-        nearby.forEach(item => {
-            renderCard(item);
-            renderMapPin(item);
-        });
-    }
-
-    async function searchRealtimePlace(type) {
-        // 테스트용 수정 기준: POI는 4.3 이상, 식당은 4.2 이상
-        const minRating = (type === 'POI') ? 4.3 : 4.2;
-        document.getElementById('statusBox').innerText = `내 실제 위치 주변 50m 실시간 구글 검색 중 (평점 ${minRating}점 이상)...`;
-
-        let place = null;
-
-        if (googleApiKey) {
-            try {
-                const keyword = (type === 'POI') ? 'tourist_attraction' : 'restaurant';
-                const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${userLocation.lat},${userLocation.lng}&radius=50&type=${keyword}&key=${googleApiKey}`;
-                
-                const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-                const data = await response.json();
-
-                if (data.results && data.results.length > 0) {
-                    const filtered = data.results.filter(r => (r.rating || 0) >= minRating);
-                    if (filtered.length > 0) {
-                        const target = filtered[0];
-                        place = {
-                            name: target.name,
-                            type: type,
-                            lat: target.geometry.location.lat,
-                            lng: target.geometry.location.lng,
-                            rating: target.rating,
-                            hours: target.opening_hours ? (target.opening_hours.open_now ? "영업 중" : "영업 종료") : "정보 없음",
-                            phone: "구글맵 조회 가능",
-                            web: `https://www.google.com/maps/place/?q=place_id:${target.place_id}`,
-                            desc: target.vicinity || "실시간 구글 지도 검색 결과"
-                        };
+        try {
+            let apiResults = await fetchPlacesViaSDK(myLat, myLng, radiusKm * 1000, targetType);
+            apiResults.forEach(p => {
+                let pRating = p.rating || 0;
+                if (pRating >= minRating && p.geometry && p.geometry.location) {
+                    let lat = p.geometry.location.lat();
+                    let lng = p.geometry.location.lng();
+                    let dist = calculateDistance(myLat, myLng, lat, lng);
+                    if (dist <= radiusKm) {
+                        matchedList.push({
+                            type: targetType,
+                            name: p.name,
+                            dist: dist,
+                            lat: lat,
+                            lng: lng,
+                            data: { 
+                                Rating: pRating, 
+                                영업시간: p.opening_hours && p.opening_hours.isOpen ? (p.opening_hours.isOpen() ? "영업 중" : "영업 종료") : "정보 없음", 
+                                홈페이지: p.vicinity || "API 실시간 조회", 
+                                전화번호: "API 실시간 조회" 
+                            },
+                            source: 'Google API'
+                        });
                     }
                 }
-            } catch (e) {
-                console.error("구글 Places API 검색 실패:", e);
+            });
+        } catch (e) {
+            console.error("Google API 조회 오류", e);
+        }
+    }
+
+    matchedList.sort((a, b) => a.dist - b.dist);
+
+    if (matchedList.length > 0) {
+        const topItem = matchedList[0];
+        let confirmText = `${radiusKm}Km 이내에 평점 ${minRating} 이상인 [${topItem.name}] 외 ${matchedList.length}곳이 검색되었습니다.\n(가장 가까운 장소 출처: ${topItem.source})\n안내를 진행할까요?`;
+        
+        if (confirm(confirmText)) {
+            let speechMsg = `가장 가까운 장소는 ${topItem.name} 이며, 거리는 ${topItem.dist.toFixed(1)}킬로미터, 평점은 ${topItem.data.Rating || topItem.data.평점}점 입니다.`;
+            speakText(speechMsg);
+
+            const board = document.getElementById('spatialBoard');
+            const infoList = document.getElementById('infoCardList');
+            board.innerHTML = "";
+            infoList.innerHTML = "";
+
+            const myMarker = document.createElement('div');
+            myMarker.className = 'marker';
+            myMarker.style.left = '50%';
+            myMarker.style.top = '50%';
+            myMarker.innerHTML = `<div class="marker-icon marker-my"></div><div class="marker-label">내 위치</div>`;
+            board.appendChild(myMarker);
+
+            matchedList.forEach(item => renderItemOnBoardAndList(item, myLat, myLng));
+        }
+        document.getElementById('currentStatusText').innerText = `총 ${matchedList.length}개의 ${targetType} 항목을 거리순으로 정렬했습니다.`;
+    } else {
+        alert(`${radiusKm}Km 이내 조건(평점 ${minRating} 이상)에 부합하는 장소가 없습니다.`);
+        document.getElementById('currentStatusText').innerText = "검색 결과가 없습니다.";
+    }
+}
+
+function fetchPlacesViaSDK(lat, lng, radiusMeter, targetType) {
+    return new Promise((resolve) => {
+        const request = {
+            location: new google.maps.LatLng(lat, lng),
+            radius: radiusMeter,
+            type: targetType === 'POI' ? ['tourist_attraction'] : ['restaurant']
+        };
+
+        const timer = setTimeout(() => {
+            resolve([]);
+        }, 5000);
+
+        googlePlacesService.nearbySearch(request, (results, status) => {
+            clearTimeout(timer);
+            if (status === google.maps.places.PlacesServiceStatus.OK || status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+                resolve(results || []);
+            } else {
+                resolve([]);
             }
-        }
+        });
+    });
+}
 
-        if (!place) {
-            document.getElementById('statusBox').innerText = `50m 이내에 평점 ${minRating}점 이상인 실시간 장소가 없습니다.`;
-            return;
-        }
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ko-KR';
+        window.speechSynthesis.speak(utterance);
+    }
+}
 
-        pendingRealtimePlace = place;
-        const msg = `50미터 이내에 ${place.name}가 있습니다. 소개해 드릴까요?`;
-        
-        document.getElementById('modalPromptText').innerText = msg;
-        document.getElementById('promptModal').style.display = 'flex';
-        speakVoice(msg);
+function refreshDatabaseViews() {
+    renderTable('CountryDB', 'view-country');
+    renderTable('CityDB', 'view-city');
+    renderTable('PoiDB', 'view-poi');
+    renderTable('RestaurantDB', 'view-restaurant');
+    renderTable('HierarchyMapDB', 'view-hierarchy');
+}
+
+function renderTable(dbKey, targetId) {
+    const data = JSON.parse(localStorage.getItem(dbKey) || '{}');
+    const container = document.getElementById(targetId);
+    const keys = Object.keys(data);
+
+    if (keys.length === 0) {
+        container.innerHTML = "<p>데이터가 없습니다.</p>";
+        return;
     }
 
-    function confirmVoiceRecommendation(isYes) {
-        document.getElementById('promptModal').style.display = 'none';
-        if (!isYes || !pendingRealtimePlace) return;
-
-        const targetTable = (pendingRealtimePlace.type === 'POI') ? dbPoiTable : dbRestaurantTable;
-        const dbRecord = targetTable.find(i => i.name === pendingRealtimePlace.name);
-
-        let speechText = "";
-        let finalDisplayPlace = pendingRealtimePlace;
-
-        if (dbRecord) {
-            speechText = `DB 테이블 조회 성공. ${dbRecord.name}은 평점 ${dbRecord.rating}점이며, ${dbRecord.desc}`;
-            finalDisplayPlace = dbRecord;
-        } else {
-            speechText = `실시간 구글 검색 결과입니다. ${pendingRealtimePlace.name}은 평점 ${pendingRealtimePlace.rating}점의 추천 장소입니다.`;
-        }
-
-        speakVoice(speechText);
-        
-        const resultsList = document.getElementById('resultsList');
-        resultsList.innerHTML = '';
-        clearRadarMap();
-        renderCard(finalDisplayPlace);
-        renderMapPin(finalDisplayPlace);
+    let html = "<table><thead><tr><th>KEY</th><th>상세 데이터 내용</th></tr></thead><tbody>";
+    for (let k of keys) {
+        html += `<tr><td><b>${k}</b></td><td><pre style="margin:0; white-space:pre-wrap;">${JSON.stringify(data[k], null, 2)}</pre></td></tr>`;
     }
+    html += "</tbody></table>";
+    container.innerHTML = html;
+}
 
-    function speakVoice(text) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'ko-KR';
-            window.speechSynthesis.speak(utterance);
-        }
+function openTab(evt, tabId) {
+    let tabcontents = document.getElementsByClassName("tab-content");
+    for (let i = 0; i < tabcontents.length; i++) {
+        tabcontents[i].classList.remove("active");
     }
-
-    function renderCard(item) {
-        const resultsList = document.getElementById('resultsList');
-        const card = document.createElement('div');
-        card.className = 'card';
-        const badgeColor = item.type === 'POI' ? '#0284c7' : '#0d9488';
-        const distMeter = Math.round((item.distance || calculateDistance(userLocation.lat, userLocation.lng, item.lat, item.lng)) * 1000);
-
-        card.innerHTML = `
-            <div class="card-header">
-                <span>${item.name}</span>
-                <span class="card-badge" style="background:${badgeColor}">${item.type} (${distMeter}m)</span>
-            </div>
-            <div class="card-body">
-                ⭐ 평점: <b>${item.rating}</b> | 🕒 영업시간: ${item.hours}<br>
-                📞 전화: ${item.phone}<br>
-                🌐 웹: ${item.web.startsWith('http') ? `<a href="${item.web}" target="_blank">${item.web}</a>` : item.web}<br>
-                📝 ${item.desc}
-            </div>
-        `;
-        resultsList.appendChild(card);
+    let tablinks = document.getElementsByClassName("tab-btn");
+    for (let i = 0; i < tablinks.length; i++) {
+        tablinks[i].classList.remove("active");
     }
+    document.getElementById(tabId).classList.add("active");
+    evt.currentTarget.classList.add("active");
+}
 
-    function renderMapPin(item) {
-        const radarMap = document.getElementById('radarMap');
-        const pin = document.createElement('div');
-        pin.className = `map-pin ${item.type === 'POI' ? 'pin-poi' : 'pin-res'}`;
-        
-        const dLat = item.lat - userLocation.lat;
-        const dLng = item.lng - userLocation.lng;
-        
-        const offsetX = (dLng / 0.012) * 100; 
-        const offsetY = -(dLat / 0.009) * 100;
-
-        pin.style.left = `calc(50% + ${offsetX}px)`;
-        pin.style.top = `calc(50% + ${offsetY}px)`;
-        pin.innerText = item.name.substring(0, 5);
-
-        radarMap.appendChild(pin);
-    }
-
-    function clearRadarMap() {
-        const pins = document.querySelectorAll('.map-pin');
-        pins.forEach(p => p.remove());
-    }
+window.onload = function() {
+    refreshDatabaseViews();
+    renderSpatialData();
+};
 </script>
+
 </body>
 </html>
